@@ -121,6 +121,15 @@ body.modal-open {
   overflow: hidden;
 }
 
+/* Responsive Visibility Helpers */
+.mobile-text {
+  display: none !important;
+}
+
+.desktop-text {
+  display: inline !important;
+}
+
 /* Container & Layout */
 .app-container {
   width: 100%;
@@ -845,6 +854,12 @@ body.modal-open {
   color: var(--text-muted);
 }
 
+.filter-dropdowns-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .input-field, .select-field {
   width: 100%;
   font-family: inherit;
@@ -1285,90 +1300,6 @@ body.modal-open {
 }
 
 /* ========================================================
-   RESPONSIVE DESIGN (MOBILE-FIRST BREAKPOINTS)
-   ======================================================== */
-@media (max-width: 768px) {
-  .app-container {
-    padding: 12px 14px 90px 14px;
-  }
-
-  .brand-titles h1 {
-    font-size: 1rem;
-  }
-
-  .app-nav-tabs {
-    display: none; /* Gantian pakai mobile bottom nav */
-  }
-
-  .mobile-bottom-nav {
-    display: flex;
-  }
-
-  .stats-bento-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-
-  .stat-card {
-    padding: 14px;
-  }
-
-  .stat-value {
-    font-size: 1.25rem;
-  }
-
-  .table-responsive {
-    display: none; /* Gunakan card list di mobile */
-  }
-
-  .mobile-transaction-list {
-    display: flex;
-  }
-
-  .calendar-cell {
-    min-height: 60px;
-    padding: 4px 6px;
-  }
-
-  .calendar-cell .cell-amount {
-    font-size: 0.65rem;
-    padding: 2px 4px;
-  }
-
-  .calendar-legend {
-    gap: 8px;
-    font-size: 0.7rem;
-  }
-
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-
-  .filter-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .search-input-wrap {
-    min-width: 100%;
-  }
-
-  .filter-group {
-    width: 100%;
-  }
-
-  .filter-group select {
-    flex: 1;
-  }
-}
-
-@media (max-width: 480px) {
-  .stats-bento-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ========================================================
    SELEKTOR BULAN & ANGGARAN (MONTHLY BUDGET BAR)
    ======================================================== */
 .month-selector-bar {
@@ -1418,6 +1349,12 @@ body.modal-open {
 .month-select:focus, .year-select:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.month-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 /* Excel Button */
@@ -1581,6 +1518,12 @@ body.modal-open {
   background: var(--bg-surface-elevated);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
+}
+
+.neraca-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .balance-table {
@@ -1773,5 +1716,568 @@ body.modal-open {
 .d-none {
   display: none !important;
 }
+
+/* ========================================================
+   COMPREHENSIVE RESPONSIVE DESIGN (SMARTPHONE 9:16 & TABLET)
+   ======================================================== */
+
+@media (max-width: 768px) {
+  /* Text display switching */
+  .mobile-text {
+    display: inline !important;
+  }
+  .desktop-text {
+    display: none !important;
+  }
+
+  /* Body & App Container Layout */
+  .app-container {
+    padding: 10px 12px calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 20px) 12px;
+  }
+
+  /* Hide Desktop Tab Bar */
+  .app-nav-tabs {
+    display: none !important;
+  }
+
+  /* Show Bottom Navigation Bar */
+  .mobile-bottom-nav {
+    display: flex !important;
+    height: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+    padding: 4px 6px calc(4px + env(safe-area-inset-bottom, 0px)) 6px;
+  }
+
+  /* Mobile App Header Compact */
+  .app-header {
+    padding: 8px 12px;
+    margin-bottom: 12px;
+  }
+
+  .header-inner {
+    gap: 8px;
+    align-items: center;
+  }
+
+  .brand-section {
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .brand-logo-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+  }
+
+  .brand-titles {
+    min-width: 0;
+  }
+
+  .brand-titles h1 {
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+  }
+
+  .brand-subtitle {
+    display: none !important; /* Sembunyikan subtitle panjang di ponsel */
+  }
+
+  .header-actions {
+    gap: 6px;
+    flex-shrink: 0;
+    align-items: center;
+  }
+
+  /* Compact Role & Cloud Badges (Cegah Distorsi Bubble Lingkaran) */
+  .role-badge {
+    padding: 4px 8px !important;
+    font-size: 0.68rem !important;
+    gap: 4px !important;
+    white-space: nowrap !important;
+    border-radius: 9999px !important;
+    height: 28px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .role-badge .role-dot {
+    width: 6px;
+    height: 6px;
+    flex-shrink: 0;
+  }
+
+  /* Tombol Aksi Header */
+  #adminLoginBtn, #adminLogoutBtn {
+    padding: 5px 8px !important;
+    font-size: 0.72rem !important;
+    height: 28px;
+  }
+
+  .btn-icon {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+  }
+
+  /* Toolbar Selektor Bulan - 2 Baris Bersih & Seimbang */
+  .month-selector-bar {
+    padding: 10px 12px;
+    gap: 10px;
+    margin-bottom: 14px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .month-picker-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .month-picker-label {
+    display: none !important;
+  }
+
+  #btnPrevMonth, #btnNextMonth {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    border-radius: var(--radius-sm);
+  }
+
+  .month-select {
+    flex: 2;
+    min-width: 0;
+    padding: 6px 8px;
+    font-size: 0.82rem;
+    height: 34px;
+  }
+
+  .year-select {
+    flex: 1.2;
+    min-width: 0;
+    padding: 6px 6px;
+    font-size: 0.82rem;
+    height: 34px;
+  }
+
+  .month-actions-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .month-actions-group .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 7px 10px;
+    font-size: 0.76rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Bento Stats Grid - Tetap 2 Kolom Kompak di HP */
+  .stats-bento-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    margin-bottom: 14px;
+  }
+
+  .stat-card {
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+  }
+
+  .stat-header {
+    margin-bottom: 4px;
+  }
+
+  .stat-title {
+    font-size: 0.68rem;
+    letter-spacing: 0.02em;
+  }
+
+  .stat-icon {
+    width: 24px;
+    height: 24px;
+    font-size: 0.8rem;
+  }
+
+  .stat-value {
+    font-size: 1.15rem !important;
+    letter-spacing: -0.02em;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .stat-footer {
+    font-size: 0.68rem;
+  }
+
+  .stat-footer .btn {
+    padding: 2px 6px;
+    font-size: 0.65rem;
+  }
+
+  /* Progress Bar Container */
+  .budget-progress-container {
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    border-radius: var(--radius-lg);
+  }
+
+  .progress-title-wrap h3 {
+    font-size: 0.95rem;
+  }
+
+  .progress-title-wrap p {
+    font-size: 0.72rem;
+  }
+
+  /* Catatan Belanja Ringkas */
+  .shopping-notes-card {
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    border-radius: var(--radius-lg);
+  }
+
+  .notes-card-header {
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    gap: 8px;
+  }
+
+  .notes-card-title {
+    font-size: 0.9rem;
+  }
+
+  #btnCopyShoppingNotes {
+    padding: 4px 8px;
+    font-size: 0.72rem;
+    flex-shrink: 0;
+  }
+
+  .notes-paper-box {
+    padding: 10px 12px;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    max-height: 260px;
+  }
+
+  /* Section Title Wraps */
+  .section-title-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    margin-bottom: 12px;
+    gap: 10px;
+  }
+
+  .section-title-wrap > div:last-child {
+    display: flex;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .section-title-wrap > div:last-child .btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .section-title-wrap h3 {
+    font-size: 1rem;
+    font-weight: 800;
+  }
+
+  /* Kalender Pengeluaran di Smartphone */
+  .calendar-wrapper {
+    padding: 12px 10px;
+    border-radius: var(--radius-lg);
+  }
+
+  .calendar-legend {
+    gap: 6px;
+    font-size: 0.68rem;
+    margin-bottom: 10px;
+    padding: 6px 10px;
+  }
+
+  .calendar-weekdays {
+    gap: 2px;
+    margin-bottom: 4px;
+  }
+
+  .weekday-name {
+    font-size: 0.65rem;
+  }
+
+  .calendar-days {
+    gap: 3px;
+  }
+
+  .calendar-cell {
+    min-height: 54px;
+    padding: 3px 2px;
+    border-radius: 6px;
+  }
+
+  .day-number {
+    font-size: 0.72rem;
+  }
+
+  .tx-badge {
+    display: none;
+  }
+
+  .cell-amount {
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 2px 2px;
+    border-radius: 4px;
+    white-space: nowrap;
+    text-align: center;
+    line-height: 1.1;
+  }
+
+  .cell-amount-empty {
+    font-size: 0.65rem;
+  }
+
+  /* Log Belanja & Filter di HP */
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .filter-group {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .search-input-wrap {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .filter-dropdowns-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .filter-dropdowns-row .select-field {
+    width: 100%;
+    font-size: 0.8rem;
+    padding: 8px 10px;
+  }
+
+  /* Sembunyikan Tabel Desktop, Tampilkan Kartu Mobile */
+  .table-responsive {
+    display: none !important;
+  }
+
+  .mobile-transaction-list {
+    display: flex !important;
+    gap: 8px;
+  }
+
+  .mobile-tx-card {
+    padding: 12px;
+  }
+
+  .mobile-tx-title {
+    font-size: 0.88rem;
+  }
+
+  .mobile-tx-amount {
+    font-size: 0.95rem;
+  }
+
+  /* Kelola Kategori Grid */
+  .categories-management-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .category-item-card {
+    padding: 10px 14px;
+  }
+
+  /* Neraca Keuangan & Grafik */
+  .analytics-section {
+    gap: 16px;
+  }
+
+  .balance-sheet-card {
+    padding: 14px 12px;
+    border-radius: var(--radius-lg);
+  }
+
+  .balance-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .balance-title-wrap h3 {
+    font-size: 1rem;
+  }
+
+  .balance-metrics-chips {
+    gap: 6px;
+  }
+
+  .balance-chip {
+    padding: 4px 8px;
+    font-size: 0.72rem;
+  }
+
+  .neraca-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius-md);
+  }
+
+  .balance-table {
+    min-width: 480px;
+    font-size: 0.78rem;
+  }
+
+  .balance-table th {
+    padding: 8px 10px;
+    font-size: 0.7rem;
+  }
+
+  .balance-table td {
+    padding: 10px 10px;
+  }
+
+  .charts-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .chart-card {
+    padding: 14px 12px;
+    border-radius: var(--radius-lg);
+  }
+
+  .chart-header h4 {
+    font-size: 0.92rem;
+  }
+
+  .donut-svg {
+    width: 160px;
+    height: 160px;
+  }
+
+  /* Modals - Format Bottom Sheet di Smartphone */
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal-box {
+    max-width: 100vw;
+    border-radius: 20px 20px 0 0;
+    max-height: 88vh;
+    border-bottom: none;
+    transform: translateY(100%);
+  }
+
+  .modal-overlay.active .modal-box {
+    transform: translateY(0);
+  }
+
+  .modal-header {
+    padding: 14px 18px;
+  }
+
+  .modal-title {
+    font-size: 1rem;
+  }
+
+  .modal-body {
+    padding: 16px 18px;
+    gap: 12px;
+  }
+
+  .modal-footer {
+    padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px)) 18px;
+    border-radius: 0;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  /* Cegah auto-zoom browser iOS/Android saat fokus input */
+  .input-field, .select-field, textarea.input-field {
+    font-size: 16px !important;
+  }
+}
+
+/* Tweak Ekstra untuk Ponsel Sangat Kecil (<= 380px) */
+@media (max-width: 380px) {
+  .app-container {
+    padding: 8px 8px calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 16px) 8px;
+  }
+
+  .brand-titles h1 {
+    font-size: 0.88rem;
+  }
+
+  .stat-card {
+    padding: 8px 10px;
+  }
+
+  .stat-value {
+    font-size: 1.02rem !important;
+  }
+
+  .month-actions-group .btn {
+    font-size: 0.72rem;
+    padding: 6px 6px;
+  }
+
+  .mobile-nav-item {
+    padding: 4px 6px;
+    font-size: 0.65rem;
+    min-width: 50px;
+  }
+
+  .mobile-nav-item svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
 
 

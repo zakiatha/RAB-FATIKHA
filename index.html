@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>RAB - Rencana Anggaran Biaya & Belanja</title>
   <meta name="description" content="Aplikasi pencatatan RAB, monitoring realisasi anggaran bulanan fleksibel, kalender pengeluaran, format catatan belanja saldo berjalan, dan ekspor Excel.">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=20260908_mobile2">
 </head>
 <body>
 
@@ -16,7 +16,7 @@
         <div class="brand-logo-icon">📊</div>
         <div class="brand-titles">
           <h1>RAB & Anggaran</h1>
-          <p>Sistem Pengendalian Belanja & Realisasi</p>
+          <p class="brand-subtitle">Sistem Pengendalian Belanja & Realisasi</p>
         </div>
       </div>
 
@@ -24,25 +24,26 @@
         <!-- Cloud Sync Badge -->
         <div id="cloudSyncBadge" class="role-badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.72rem;">
           <span class="role-dot" style="background: #10b981;"></span>
-          <span id="cloudSyncText">Supabase Cloud</span>
+          <span id="cloudSyncText"><span class="desktop-text">Supabase Cloud</span><span class="mobile-text">Cloud</span></span>
         </div>
 
         <!-- Status Role Badge -->
-        <div id="currentRoleBadge" class="role-badge role-user">
+        <div id="currentRoleBadge" class="role-badge role-admin">
           <span class="role-dot"></span>
-          <span class="role-text">Mode Pengguna</span>
+          <span class="role-text"><span class="desktop-text">Mode Admin (Akses Penuh)</span><span class="mobile-text">Admin</span></span>
         </div>
 
         <!-- Tombol Masuk Admin -->
-        <button type="button" class="btn btn-primary btn-sm" id="adminLoginBtn" title="Masuk Mode Admin">
+        <button type="button" class="btn btn-primary btn-sm" id="adminLoginBtn" style="display: none;" title="Masuk Mode Admin">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          <span>Masuk Admin</span>
+          <span class="desktop-text">Masuk Admin</span>
+          <span class="mobile-text">Masuk</span>
         </button>
 
         <!-- Tombol Logout Admin -->
-        <button type="button" class="btn btn-outline-danger btn-sm" id="adminLogoutBtn" style="display: none;" title="Keluar dari Admin">
+        <button type="button" class="btn btn-outline-danger btn-sm" id="adminLogoutBtn" title="Keluar dari Admin">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          <span>Keluar</span>
+          <span class="desktop-text">Keluar</span>
         </button>
 
         <!-- Theme Toggle (Dark / Light / Pink Pastel) -->
@@ -95,7 +96,7 @@
       <div class="month-picker-group">
         <span class="month-picker-label">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          Periode Bulan:
+          <span class="desktop-text">Periode Bulan:</span>
         </span>
         <button type="button" class="btn btn-outline btn-xs" id="btnPrevMonth" title="Bulan Sebelumnya">&larr;</button>
         <select class="month-select">
@@ -121,17 +122,19 @@
         <button type="button" class="btn btn-outline btn-xs" id="btnNextMonth" title="Bulan Berikutnya">&rarr;</button>
       </div>
 
-      <div style="display: flex; gap: 8px; align-items: center;">
+      <div class="month-actions-group">
         <!-- Tombol Ubah Budget Bulan Ini -->
         <button type="button" class="btn btn-outline btn-sm admin-only" id="btnQuickEditBudgetBar" title="Atur Anggaran Bulan Terpilih">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-          <span>Ubah Anggaran Bulan Ini</span>
+          <span class="desktop-text">Ubah Anggaran Bulan Ini</span>
+          <span class="mobile-text">Ubah Anggaran</span>
         </button>
 
         <!-- Tombol Ekspor Excel -->
         <button type="button" class="btn btn-excel btn-sm btn-export-excel" title="Unduh Laporan Bulan Ini dalam Format Excel">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-          <span>Ekspor ke Excel</span>
+          <span class="desktop-text">Ekspor ke Excel</span>
+          <span class="mobile-text">Ekspor Excel</span>
         </button>
       </div>
     </div>
@@ -269,15 +272,17 @@
             <input type="text" class="input-field" id="searchTxInput" placeholder="Cari nama barang atau catatan...">
           </div>
 
-          <select class="select-field" id="filterCategorySelect" style="max-width: 220px;">
-            <option value="all">Semua Kategori (3 Kategori)</option>
-          </select>
+          <div class="filter-dropdowns-row">
+            <select class="select-field" id="filterCategorySelect">
+              <option value="all">Semua Kategori (3 Kategori)</option>
+            </select>
 
-          <select class="select-field" id="filterDateRangeSelect" style="max-width: 150px;">
-            <option value="this_month" selected>Bulan Terpilih</option>
-            <option value="this_week">Minggu Ini</option>
-            <option value="all">Semua Waktu</option>
-          </select>
+            <select class="select-field" id="filterDateRangeSelect">
+              <option value="this_month" selected>Bulan Terpilih</option>
+              <option value="this_week">Minggu Ini</option>
+              <option value="all">Semua Waktu</option>
+            </select>
+          </div>
         </div>
 
         <div style="font-size: 0.8rem; color: var(--text-secondary); display: flex; gap: 10px; align-items: center;">
@@ -346,19 +351,21 @@
             </div>
           </div>
 
-          <table class="balance-table">
-            <thead>
-              <tr>
-                <th style="width: 45%;">Pos Neraca &amp; Deskripsi</th>
-                <th style="width: 20%;" class="text-right">Debet (Masuk)</th>
-                <th style="width: 20%;" class="text-right">Kredit (Keluar)</th>
-                <th style="width: 15%;" class="text-right">Saldo Bersih</th>
-              </tr>
-            </thead>
-            <tbody id="balanceSheetTableBody">
-              <!-- Injected by app.js -->
-            </tbody>
-          </table>
+          <div class="neraca-table-wrap">
+            <table class="balance-table">
+              <thead>
+                <tr>
+                  <th style="width: 45%;">Pos Neraca &amp; Deskripsi</th>
+                  <th style="width: 20%;" class="text-right">Debet (Masuk)</th>
+                  <th style="width: 20%;" class="text-right">Kredit (Keluar)</th>
+                  <th style="width: 15%;" class="text-right">Saldo Bersih</th>
+                </tr>
+              </thead>
+              <tbody id="balanceSheetTableBody">
+                <!-- Injected by app.js -->
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <!-- 2. Grid Grafik (Bar Chart & Donut Chart) -->
@@ -566,9 +573,9 @@
   </div>
 
   <!-- Scripts -->
-  <script src="js/security.js?v=2026"></script>
-  <script src="js/supabase.js?v=2026"></script>
-  <script src="js/calendar.js?v=2026"></script>
-  <script src="js/app.js?v=2026"></script>
+  <script src="js/security.js?v=20260908b"></script>
+  <script src="js/supabase.js?v=20260908b"></script>
+  <script src="js/calendar.js?v=20260908_fix1"></script>
+  <script src="js/app.js?v=20260908_fix1"></script>
 </body>
 </html>

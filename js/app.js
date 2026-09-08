@@ -297,13 +297,13 @@ const RABApp = (function() {
         roleBadge.className = 'role-badge role-admin';
         roleBadge.innerHTML = `
           <span class="role-dot"></span>
-          <span class="role-text">Mode Admin (Akses Penuh)</span>
+          <span class="role-text"><span class="desktop-text">Mode Admin (Akses Penuh)</span><span class="mobile-text">Admin</span></span>
         `;
       } else {
         roleBadge.className = 'role-badge role-user';
         roleBadge.innerHTML = `
           <span class="role-dot"></span>
-          <span class="role-text">Mode Pengguna (Hanya Lihat)</span>
+          <span class="role-text"><span class="desktop-text">Mode Pengguna (Hanya Lihat)</span><span class="mobile-text">Tamu</span></span>
         `;
       }
     }
@@ -1730,12 +1730,12 @@ const RABApp = (function() {
             badge.style.background = 'rgba(16, 185, 129, 0.15)';
             badge.style.color = '#10b981';
             badge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
-            text.textContent = 'Supabase Cloud';
+            text.innerHTML = '<span class="desktop-text">Supabase Cloud</span><span class="mobile-text">Cloud</span>';
           } else {
             badge.style.background = 'rgba(245, 158, 11, 0.15)';
             badge.style.color = '#f59e0b';
             badge.style.borderColor = 'rgba(245, 158, 11, 0.3)';
-            text.textContent = 'Mode Offline (Lokal)';
+            text.innerHTML = '<span class="desktop-text">Mode Offline (Lokal)</span><span class="mobile-text">Offline</span>';
           }
         }
       });

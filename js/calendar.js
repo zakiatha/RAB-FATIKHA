@@ -178,12 +178,10 @@ const RABCalendar = (function() {
             <span class="day-number">${day}</span>
             ${count > 0 ? `<span class="tx-badge">${count} item</span>` : ''}
           </div>
-          <div class="cell-bottom">
-            ${hasData 
-              ? `<div class="cell-amount amount-${level}">${Security.formatRupiah(amount)}</div>`
-              : `<div class="cell-amount-empty">-</div>`
-            }
-          </div>
+          ${hasData 
+            ? `<div class="cell-amount amount-${level}"><span class="desktop-text">${Security.formatRupiah(amount)}</span><span class="mobile-text">${Security.formatK(amount)}</span></div>`
+            : `<div class="cell-amount-empty">-</div>`
+          }
         </div>
       `;
     }

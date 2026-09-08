@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>RAB - Rencana Anggaran Biaya & Belanja</title>
+  <meta name="description" content="Aplikasi pencatatan RAB, monitoring realisasi anggaran bulanan fleksibel, kalender pengeluaran, format catatan belanja saldo berjalan, dan ekspor Excel.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Top App Header -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand-section">
+        <div class="brand-logo-icon">📊</div>
+        <div class="brand-titles">
+          <h1>RAB & Anggaran</h1>
+          <p>Sistem Pengendalian Belanja & Realisasi</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Cloud Sync Badge -->
+        <div id="cloudSyncBadge" class="role-badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.72rem;">
+          <span class="role-dot" style="background: #10b981;"></span>
+          <span id="cloudSyncText">Supabase Cloud</span>
+        </div>
+
+        <!-- Status Role Badge -->
+        <div id="currentRoleBadge" class="role-badge role-user">
+          <span class="role-dot"></span>
+          <span class="role-text">Mode Pengguna</span>
+        </div>
+
+        <!-- Tombol Masuk Admin -->
+        <button type="button" class="btn btn-primary btn-sm" id="adminLoginBtn" title="Masuk Mode Admin">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span>Masuk Admin</span>
+        </button>
+
+        <!-- Tombol Logout Admin -->
+        <button type="button" class="btn btn-outline-danger btn-sm" id="adminLogoutBtn" style="display: none;" title="Keluar dari Admin">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Keluar</span>
+        </button>
+
+        <!-- Theme Toggle (Dark / Light / Pink Pastel) -->
+        <button type="button" class="btn-icon" id="themeToggleBtn" title="Ganti Tema (Gelap / Terang / Pink Pastel)">
+          <span id="themeToggleIcon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          </span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="app-container">
+
+    <!-- Read-Only Notice for Regular Users -->
+    <div id="readOnlyBanner" class="read-only-banner">
+      <p>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>Anda sedang dalam <strong>Mode Tamu (Hanya Lihat)</strong>. Anda dapat melihat riwayat dan kalender belanja, namun pengeditan terkunci.</span>
+      </p>
+    </div>
+
+    <!-- Desktop Nav Tabs -->
+    <nav class="app-nav-tabs">
+      <button type="button" class="nav-tab-btn active" data-tab="dashboard">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        <span>Ringkasan & Realisasi</span>
+      </button>
+      <button type="button" class="nav-tab-btn" data-tab="calendar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span>Kalender Pengeluaran</span>
+      </button>
+      <button type="button" class="nav-tab-btn" data-tab="transactions">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        <span>Log Belanja</span>
+      </button>
+      <button type="button" class="nav-tab-btn" data-tab="categories">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        <span>Kategori & Budget</span>
+      </button>
+      <button type="button" class="nav-tab-btn" data-tab="analytics">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span>Grafik &amp; Neraca</span>
+      </button>
+    </nav>
+
+    <!-- TOOLBAR SELEKTOR BULAN & ANGGARAN (Bisa ganti bulan kapan saja) -->
+    <div class="month-selector-bar">
+      <div class="month-picker-group">
+        <span class="month-picker-label">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Periode Bulan:
+        </span>
+        <button type="button" class="btn btn-outline btn-xs" id="btnPrevMonth" title="Bulan Sebelumnya">&larr;</button>
+        <select class="month-select">
+          <option value="0">Januari</option>
+          <option value="1">Februari</option>
+          <option value="2">Maret</option>
+          <option value="3">April</option>
+          <option value="4">Mei</option>
+          <option value="5">Juni</option>
+          <option value="6">Juli</option>
+          <option value="7">Agustus</option>
+          <option value="8">September</option>
+          <option value="9">Oktober</option>
+          <option value="10">November</option>
+          <option value="11">Desember</option>
+        </select>
+        <select class="year-select">
+          <option value="2025">2025</option>
+          <option value="2026" selected>2026</option>
+          <option value="2027">2027</option>
+          <option value="2028">2028</option>
+        </select>
+        <button type="button" class="btn btn-outline btn-xs" id="btnNextMonth" title="Bulan Berikutnya">&rarr;</button>
+      </div>
+
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <!-- Tombol Ubah Budget Bulan Ini -->
+        <button type="button" class="btn btn-outline btn-sm admin-only" id="btnQuickEditBudgetBar" title="Atur Anggaran Bulan Terpilih">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <span>Ubah Anggaran Bulan Ini</span>
+        </button>
+
+        <!-- Tombol Ekspor Excel -->
+        <button type="button" class="btn btn-excel btn-sm btn-export-excel" title="Unduh Laporan Bulan Ini dalam Format Excel">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+          <span>Ekspor ke Excel</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB SECTION 1: RINGKASAN & REALISASI -->
+    <section id="tabSection_dashboard" class="tab-content-section active">
+      <!-- Bento Stats Grid -->
+      <div class="stats-bento-grid">
+        <!-- Budget Awal -->
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Budget Awal</span>
+            <span class="stat-icon">💰</span>
+          </div>
+          <div class="stat-value" id="statInitialBudget">Rp 0</div>
+          <div class="stat-footer">
+            <span id="budgetPeriodBadge">Periode Aktif</span>
+            <button type="button" class="btn btn-outline btn-xs admin-only" id="btnOpenEditBudget" title="Ubah Anggaran Bulan Terpilih">Ubah</button>
+          </div>
+        </div>
+
+        <!-- Realisasi Pengeluaran -->
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Realisasi Belanja</span>
+            <span class="stat-icon">🛒</span>
+          </div>
+          <div class="stat-value text-warning" id="statTotalSpent">Rp 0</div>
+          <div class="stat-footer">
+            <span>Total Pengeluaran Bulan Ini</span>
+          </div>
+        </div>
+
+        <!-- Sisa Anggaran -->
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Sisa Anggaran</span>
+            <span class="stat-icon">⚖️</span>
+          </div>
+          <div class="stat-value text-success" id="statRemainingBudget">Rp 0</div>
+          <div class="stat-footer">
+            <span>Saldo Tersedia</span>
+          </div>
+        </div>
+
+        <!-- Persentase Pengeluaran -->
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Tingkat Realisasi</span>
+            <span class="stat-icon">📈</span>
+          </div>
+          <div class="stat-value" id="statBudgetPercent">0%</div>
+          <div class="stat-footer" id="budgetStatusText">
+            <span class="badge-status-success">Anggaran Terkendali</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Realisasi Progress Bar -->
+      <div class="budget-progress-container">
+        <div class="progress-header">
+          <div class="progress-title-wrap">
+            <h3>Monitoring Realisasi Anggaran</h3>
+            <p>Perbandingan belanja aktual terhadap pagu anggaran yang direncanakan</p>
+          </div>
+        </div>
+        <div class="progress-bar-track">
+          <div id="budgetProgressBar" class="progress-bar-fill bg-success"></div>
+        </div>
+      </div>
+
+      <!-- FORMAT CATATAN BELANJA RINGKAS (RUNNING BALANCE & NOTASI 'k') -->
+      <div class="shopping-notes-card">
+        <div class="notes-card-header">
+          <div>
+            <h4 class="notes-card-title">📝 Catatan Belanja Harian & Saldo Berjalan</h4>
+            <p style="font-size: 0.8rem; color: var(--text-secondary);" id="notesInitialBudgetLabel">Pagu Awal: 0k</p>
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" id="btnCopyShoppingNotes" title="Salin Catatan ke Clipboard">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span>Salin Catatan</span>
+          </button>
+        </div>
+        <div class="notes-paper-box" id="compactShoppingNotesList">
+          <!-- Injected by app.js: 1. 12,5k (ebi+empon 7,5k, paket lodeh 5k). saldo : 287,5k -->
+        </div>
+      </div>
+
+      <!-- Kategori Breakdown Section (3 Kategori Utama) -->
+      <div class="section-title-wrap">
+        <h3>Alokasi Pengeluaran 3 Kategori Utama</h3>
+      </div>
+      <div class="category-breakdown-grid" id="categoryBreakdownGrid">
+        <!-- Injected via JavaScript -->
+      </div>
+    </section>
+
+    <!-- TAB SECTION 2: KALENDER PENGELUARAN -->
+    <section id="tabSection_calendar" class="tab-content-section">
+      <div class="section-title-wrap">
+        <div>
+          <h3>Kalender Pengeluaran Harian</h3>
+          <p style="font-size: 0.8rem; color: var(--text-secondary);">Pantau tanggal dengan belanja besar, sedang, dan hemat secara visual</p>
+        </div>
+      </div>
+      <div class="calendar-wrapper" id="rabCalendarContainer">
+        <!-- Rendered via calendar.js -->
+      </div>
+    </section>
+
+    <!-- TAB SECTION 3: LOG BELANJA -->
+    <section id="tabSection_transactions" class="tab-content-section">
+      <div class="section-title-wrap">
+        <div>
+          <h3>Catatan & Log Belanja</h3>
+          <p style="font-size: 0.8rem; color: var(--text-secondary);">Daftar belanja bulanan dan mingguan lengkap</p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-excel btn-sm btn-export-excel">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            <span>Ekspor Excel</span>
+          </button>
+          <button type="button" class="btn btn-primary btn-sm admin-only" id="btnOpenAddTx">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>+ Catat Belanja</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <div class="filter-group">
+          <div class="search-input-wrap">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" class="input-field" id="searchTxInput" placeholder="Cari nama barang atau catatan...">
+          </div>
+
+          <select class="select-field" id="filterCategorySelect" style="max-width: 220px;">
+            <option value="all">Semua Kategori (3 Kategori)</option>
+          </select>
+
+          <select class="select-field" id="filterDateRangeSelect" style="max-width: 150px;">
+            <option value="this_month" selected>Bulan Terpilih</option>
+            <option value="this_week">Minggu Ini</option>
+            <option value="all">Semua Waktu</option>
+          </select>
+        </div>
+
+        <div style="font-size: 0.8rem; color: var(--text-secondary); display: flex; gap: 10px; align-items: center;">
+          <span id="txFilteredCount">0 Transaksi</span>
+          <span>&bull;</span>
+          <strong id="txFilteredTotal" class="text-primary">Rp 0</strong>
+        </div>
+      </div>
+
+      <!-- Desktop Table -->
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 110px;">Tanggal</th>
+              <th style="width: 180px;">Kategori</th>
+              <th>Nama Barang & Catatan</th>
+              <th style="width: 100px;">Jumlah</th>
+              <th style="width: 160px;">Biaya</th>
+              <th style="width: 110px; text-align: center;">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="transactionTableBody">
+            <!-- Rendered by app.js -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mobile Cards List -->
+      <div class="mobile-transaction-list" id="transactionMobileList">
+        <!-- Rendered by app.js -->
+      </div>
+    </section>
+
+    <!-- TAB SECTION 4: KELOLA KATEGORI & BUDGET -->
+    <section id="tabSection_categories" class="tab-content-section">
+      <div class="section-title-wrap">
+        <div>
+          <h3>3 Kategori Utama Belanja</h3>
+          <p style="font-size: 0.8rem; color: var(--text-secondary);">Kategori fokus untuk belanja dapur: Sayur & Mayur, Protein, dan Bumbu & Minyak Dapur</p>
+        </div>
+      </div>
+
+      <div class="categories-management-grid" id="categoriesListContainer">
+        <!-- Rendered by app.js: 3 main categories -->
+      </div>
+    </section>
+
+    <!-- TAB SECTION 5: GRAFIK & NERACA KEUANGAN -->
+    <section id="tabSection_analytics" class="tab-content-section">
+      <div class="analytics-section">
+        <!-- 1. Neraca Keuangan Bulanan -->
+        <div class="balance-sheet-card">
+          <div class="balance-card-header">
+            <div class="balance-title-wrap">
+              <h3>⚖️ Neraca Keuangan Bulanan (Debet &amp; Kredit)</h3>
+              <p id="neracaPeriodLabel">Periode Aktif</p>
+            </div>
+            <div class="balance-metrics-chips">
+              <div id="neracaStatusChip" class="balance-chip chip-surplus">
+                ✅ Surplus
+              </div>
+              <div id="neracaRatioChip" class="balance-chip chip-ratio">
+                Rasio: 0%
+              </div>
+            </div>
+          </div>
+
+          <table class="balance-table">
+            <thead>
+              <tr>
+                <th style="width: 45%;">Pos Neraca &amp; Deskripsi</th>
+                <th style="width: 20%;" class="text-right">Debet (Masuk)</th>
+                <th style="width: 20%;" class="text-right">Kredit (Keluar)</th>
+                <th style="width: 15%;" class="text-right">Saldo Bersih</th>
+              </tr>
+            </thead>
+            <tbody id="balanceSheetTableBody">
+              <!-- Injected by app.js -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 2. Grid Grafik (Bar Chart & Donut Chart) -->
+        <div class="charts-grid">
+          <!-- Card 1: Grafik Batang Tren Belanja Harian -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <h4>📊 Tren Pengeluaran Harian</h4>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">Akumulasi per tanggal</span>
+            </div>
+            <div class="chart-container" id="dailyBarChartContainer">
+              <!-- Rendered via SVG in app.js -->
+            </div>
+          </div>
+
+          <!-- Card 2: Pie / Donut Chart 3 Kategori Belanja -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <h4>🍩 Proporsi 3 Kategori Belanja</h4>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">Alokasi pengeluaran</span>
+            </div>
+            <div class="pie-chart-wrap">
+              <div class="chart-container" id="categoryPieChartContainer" style="min-height: 200px;">
+                <!-- Rendered via SVG in app.js -->
+              </div>
+              <div class="pie-legend-list" id="categoryPieLegendList">
+                <!-- Legend items injected by app.js -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Sticky Mobile Bottom Navigation (Smartphone 9:16 Optimized) -->
+  <nav class="mobile-bottom-nav">
+    <button type="button" class="mobile-nav-item active" data-tab="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      <span>Ringkasan</span>
+    </button>
+    <button type="button" class="mobile-nav-item" data-tab="calendar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>Kalender</span>
+    </button>
+    <button type="button" class="mobile-nav-item" data-tab="transactions">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+      <span>Belanja</span>
+    </button>
+    <button type="button" class="mobile-nav-item" data-tab="categories">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+      <span>Kategori</span>
+    </button>
+    <button type="button" class="mobile-nav-item" data-tab="analytics">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span>Grafik</span>
+    </button>
+  </nav>
+
+  <!-- ========================================================
+       MODALS
+       ======================================================== -->
+
+  <!-- Modal: Tambah / Edit Transaksi Belanja -->
+  <div class="modal-overlay" id="transactionModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h4 class="modal-title" id="txModalTitle">Catat Belanja Baru</h4>
+        <button type="button" class="btn-icon modal-close-btn" title="Tutup">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <form id="transactionForm">
+        <input type="hidden" id="txIdInput">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Tanggal Belanja *</label>
+              <input type="date" class="input-field" id="txDateInput" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Kategori Barang *</label>
+              <select class="select-field" id="txCategoryInput" required>
+                <!-- Injected via JavaScript (Sayur & Mayur, Protein, Bumbu & Minyak Dapur) -->
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Nama Barang / Belanjaan *</label>
+            <input type="text" class="input-field" id="txNameInput" placeholder="Contoh: ebi+empon 7,5k, paket lodeh 5k" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Jumlah / Qty</label>
+              <input type="number" step="any" class="input-field" id="txQtyInput" placeholder="Contoh: 1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Satuan</label>
+              <input type="text" class="input-field" id="txUnitInput" placeholder="paket, ikat, kg, sak...">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Total Nominal Biaya (Rp) *</label>
+            <input type="number" class="input-field" id="txAmountInput" placeholder="Contoh: 12500 (untuk 12,5k)" min="0" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Keterangan / Catatan Tambahan</label>
+            <input type="text" class="input-field" id="txNoteInput" placeholder="Contoh: Belanja di warung sayur pagi hari...">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline modal-close-btn">Batal</button>
+          <button type="submit" class="btn btn-primary">Simpan Catatan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Ubah Anggaran Awal Bulan Terpilih (Budget) -->
+  <div class="modal-overlay" id="budgetModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h4 class="modal-title" id="budgetModalMonthTitle">Atur Anggaran Bulanan</h4>
+        <button type="button" class="btn-icon modal-close-btn" title="Tutup">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <form id="budgetForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Total Pagu Anggaran (Rp) *</label>
+            <input type="number" class="input-field" id="budgetAmountInput" placeholder="Contoh: 300000 (untuk 300k)" min="0" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nama Periode</label>
+            <input type="text" class="input-field" id="budgetPeriodInput" placeholder="Contoh: September 2026">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Keterangan Anggaran</label>
+            <textarea class="input-field" id="budgetNotesInput" rows="2" placeholder="Catatan peruntukan anggaran bulan ini..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline modal-close-btn">Batal</button>
+          <button type="submit" class="btn btn-primary">Simpan Anggaran</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Detail Pengeluaran Harian dari Kalender -->
+  <div class="modal-overlay" id="dayDetailModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <h4 class="modal-title" id="dayDetailModalTitle">Rincian Belanja Harian</h4>
+          <span style="font-size: 0.8rem; color: var(--text-secondary);">Total Hari Ini: <strong id="dayDetailModalTotal" class="text-primary">Rp 0</strong></span>
+        </div>
+        <button type="button" class="btn-icon modal-close-btn" title="Tutup">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="day-detail-items-list" id="dayDetailItemsList">
+          <!-- Injected via JavaScript -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary btn-sm admin-only" id="addExpenseOnThisDateBtn">
+          + Catat Belanja di Tanggal Ini
+        </button>
+        <button type="button" class="btn btn-outline modal-close-btn">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Masuk PIN Admin -->
+  <div class="modal-overlay" id="adminPinModal">
+    <div class="modal-box" style="max-width: 400px;">
+      <div class="modal-header">
+        <h4 class="modal-title">Autentikasi Mode Admin</h4>
+        <button type="button" class="btn-icon modal-close-btn" title="Tutup">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-secondary);">
+          Masukkan PIN Keamanan Admin untuk mendapatkan hak akses mengubah anggaran dan mencatat belanja.
+        </p>
+        <div class="form-group">
+          <label class="form-label">PIN Admin (Default: 1234)</label>
+          <input type="password" class="input-field" id="adminPinInput" placeholder="Masukkan 4 digit PIN..." maxlength="10" autocomplete="off" style="letter-spacing: 0.3em; font-size: 1.1rem; text-align: center;">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline modal-close-btn">Batal</button>
+        <button type="submit" class="btn btn-primary" id="adminPinSubmitBtn">Verifikasi PIN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/security.js"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/calendar.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

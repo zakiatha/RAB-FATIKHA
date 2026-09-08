@@ -1,0 +1,19 @@
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local logs
+*.log
+
+# Sensitive / Private Chat Prompts & Credentials
+chat.md
+.env
+.env.*
+*.secret

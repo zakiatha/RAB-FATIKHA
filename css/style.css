@@ -1108,6 +1108,7 @@ body.modal-open {
   left: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
@@ -2211,27 +2212,39 @@ body.modal-open {
     height: 160px;
   }
 
-  /* Modals - Format Bottom Sheet di Smartphone */
+  /* Modals - Format Terangkat & Terpusat di Layar Smartphone */
   .modal-overlay {
-    padding: 0;
-    align-items: flex-end;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    padding: 16px 14px calc(24px + env(safe-area-inset-bottom, 16px)) 14px;
+    display: flex;
+    align-items: center; /* Diangkat ke tengah layar agar tombol simpan tidak tertutup navigasi HP */
+    justify-content: center;
   }
 
   .modal-box {
-    max-width: 100vw;
+    max-width: 480px;
     width: 100%;
-    border-radius: 20px 20px 0 0;
-    max-height: 85vh;
+    border-radius: 20px;
+    max-height: min(85dvh, calc(100dvh - 36px));
     height: auto;
-    border-bottom: none;
-    transform: translateY(100%);
+    margin: auto;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65);
+    transform: scale(0.95);
     display: flex;
     flex-direction: column;
     overflow: hidden;
   }
 
   .modal-overlay.active .modal-box {
-    transform: translateY(0);
+    transform: scale(1);
   }
 
   .modal-box form {
@@ -2250,13 +2263,14 @@ body.modal-open {
   }
 
   .modal-title {
-    font-size: 1rem;
+    font-size: 1.05rem;
+    font-weight: 700;
   }
 
   .modal-body {
     flex: 1 1 auto;
     min-height: 0;
-    max-height: calc(85vh - 125px);
+    max-height: calc(85dvh - 135px);
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     padding: 14px 18px;
@@ -2271,21 +2285,22 @@ body.modal-open {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 12px 18px calc(14px + env(safe-area-inset-bottom, 0px)) 18px;
+    padding: 14px 18px;
     border-top: 1px solid var(--border-color);
     background: var(--bg-surface-elevated);
     box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.3);
-    border-radius: 0;
+    border-radius: 0 0 20px 20px;
   }
 
   .modal-footer .btn {
     flex: 1;
-    height: 44px;
-    font-size: 0.9rem;
+    height: 46px;
+    font-size: 0.95rem;
     font-weight: 700;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    border-radius: var(--radius-md);
   }
 
   .form-row {

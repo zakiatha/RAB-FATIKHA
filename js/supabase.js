@@ -33,7 +33,7 @@ const SupabaseClient = (function() {
    */
   async function testConnection() {
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rab_budgets?select=month_key&limit=1`, {
         method: 'GET',
         headers: getHeaders()
       });
@@ -44,6 +44,7 @@ const SupabaseClient = (function() {
       setStatus(false, 'Gagal terhubung ke endpoint');
       return false;
     } catch (e) {
+      console.warn('Gagal koneksi ke Supabase Cloud:', e);
       setStatus(false, 'Offline / Mode Lokal');
       return false;
     }
@@ -145,8 +146,11 @@ const SupabaseClient = (function() {
       if (res.ok) {
         setStatus(true, 'Data berhasil disimpan ke Cloud');
         return true;
+      } else {
+        const errText = await res.text();
+        console.error('Supabase REST error saat simpan transaksi:', res.status, errText);
+        return false;
       }
-      return false;
     } catch (e) {
       console.warn('Gagal sinkron transaksi ke Supabase (tersimpan di lokal):', e.message);
       return false;
@@ -191,14 +195,21 @@ const SupabaseClient = (function() {
         body: JSON.stringify(payload)
       });
 
-      return res.ok;
+      if (res.ok) {
+        setStatus(true, 'Anggaran berhasil disimpan ke Cloud');
+        return true;
+      } else {
+        const errText = await res.text();
+        console.error('Supabase REST error saat simpan anggaran:', res.status, errText);
+        return false;
+      }
     } catch (e) {
       console.warn('Gagal sinkron anggaran ke Supabase:', e.message);
       return false;
     }
   }
 
-  return {
+  const api = {
     testConnection,
     fetchTransactions,
     fetchBudgets,
@@ -209,4 +220,11 @@ const SupabaseClient = (function() {
     isConnected: () => isConnected,
     getUrl: () => SUPABASE_URL
   };
+
+  if (typeof window !== 'undefined') {
+    window.SupabaseClient = api;
+  }
+
+  return api;
 })();
+

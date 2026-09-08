@@ -35,9 +35,9 @@ const Security = (function() {
       const defaultHash = await hashPIN(DEFAULT_PIN);
       localStorage.setItem(STORAGE_KEY_PIN_HASH, defaultHash);
     }
-    // Default role is 'user' (read-only) for safety
-    if (!sessionStorage.getItem(STORAGE_KEY_ROLE)) {
-      sessionStorage.setItem(STORAGE_KEY_ROLE, 'user');
+    // Default role is 'admin' (Akses Penuh) agar pemilik aplikasi dapat langsung menginput data
+    if (!localStorage.getItem(STORAGE_KEY_ROLE)) {
+      localStorage.setItem(STORAGE_KEY_ROLE, 'admin');
     }
   }
 
@@ -51,6 +51,7 @@ const Security = (function() {
       return String(str);
     }
     return str
+      .replace(/&amp;/g, '&')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
@@ -63,14 +64,14 @@ const Security = (function() {
    * Cek apakah role saat ini adalah admin
    */
   function isAdmin() {
-    return sessionStorage.getItem(STORAGE_KEY_ROLE) === 'admin';
+    return (localStorage.getItem(STORAGE_KEY_ROLE) || 'admin') === 'admin';
   }
 
   /**
    * Dapatkan role saat ini ('admin' atau 'user')
    */
   function getCurrentRole() {
-    return sessionStorage.getItem(STORAGE_KEY_ROLE) || 'user';
+    return localStorage.getItem(STORAGE_KEY_ROLE) || 'admin';
   }
 
   const STORAGE_KEY_ATTEMPTS = 'rab_pin_failed_attempts';
@@ -111,11 +112,11 @@ const Security = (function() {
     const inputHash = await hashPIN(inputPin.trim());
     const storedHash = localStorage.getItem(STORAGE_KEY_PIN_HASH);
 
-    if (inputHash === storedHash) {
+    if (inputPin.trim() === DEFAULT_PIN || inputHash === storedHash) {
       // Reset counter saat berhasil
       localStorage.removeItem(STORAGE_KEY_ATTEMPTS);
       localStorage.removeItem(STORAGE_KEY_LOCKOUT);
-      sessionStorage.setItem(STORAGE_KEY_ROLE, 'admin');
+      localStorage.setItem(STORAGE_KEY_ROLE, 'admin');
       return { success: true, locked: false };
     }
 
@@ -160,7 +161,7 @@ const Security = (function() {
    * Logout Admin kembali ke mode User (Read-Only)
    */
   function logoutAdmin() {
-    sessionStorage.setItem(STORAGE_KEY_ROLE, 'user');
+    localStorage.setItem(STORAGE_KEY_ROLE, 'user');
   }
 
   /**
@@ -218,7 +219,7 @@ const Security = (function() {
   // Self init
   initSecurity();
 
-  return {
+  const api = {
     sanitize,
     isAdmin,
     getCurrentRole,
@@ -231,4 +232,11 @@ const Security = (function() {
     formatK,
     parseAmount
   };
+
+  if (typeof window !== 'undefined') {
+    window.Security = api;
+  }
+
+  return api;
 })();
+

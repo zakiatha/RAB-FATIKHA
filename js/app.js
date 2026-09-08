@@ -795,14 +795,24 @@ const RABApp = (function() {
     renderAll();
 
     // Sinkronisasi Cloud Supabase jika tersedia
-    if (savedTx && window.SupabaseClient) {
-      SupabaseClient.syncTransaction(savedTx);
+    const client = window.SupabaseClient || (typeof SupabaseClient !== 'undefined' ? SupabaseClient : null);
+    if (savedTx && client) {
+      client.syncTransaction(savedTx).then(success => {
+        if (success) {
+          console.log('✅ Transaksi berhasil disinkronkan ke Supabase Cloud:', savedTx.itemName);
+        } else {
+          console.warn('⚠️ Gagal sinkron ke Supabase Cloud, data tetap tersimpan di lokal.');
+        }
+      });
     }
     return true;
   }
 
   function deleteTransaction(id) {
-    Security.assertAdmin('Menghapus catatan belanja');
+    if (!Security.isAdmin()) {
+      openModal('adminPinModal');
+      return;
+    }
 
     const tx = state.transactions.find(t => t.id === id);
     if (!tx) return;
@@ -813,8 +823,13 @@ const RABApp = (function() {
       renderAll();
 
       // Hapus dari Supabase jika tersedia
-      if (window.SupabaseClient) {
-        SupabaseClient.deleteTransaction(id);
+      const client = window.SupabaseClient || (typeof SupabaseClient !== 'undefined' ? SupabaseClient : null);
+      if (client) {
+        client.deleteTransaction(id).then(success => {
+          if (success) {
+            console.log('✅ Transaksi berhasil dihapus dari Supabase Cloud');
+          }
+        });
       }
     }
   }
@@ -823,7 +838,10 @@ const RABApp = (function() {
    * Perbarui Anggaran Awal Bulan Tertentu (Multi-Month Budgeting)
    */
   function updateMonthBudget(amount, periodName, notes) {
-    Security.assertAdmin('Mengubah anggaran awal bulanan');
+    if (!Security.isAdmin()) {
+      openModal('adminPinModal');
+      return;
+    }
 
     const key = getActiveMonthKey();
     state.monthlyBudgets[key] = {
@@ -836,8 +854,13 @@ const RABApp = (function() {
     renderAll();
 
     // Sinkronisasi Anggaran ke Supabase jika tersedia
-    if (window.SupabaseClient) {
-      SupabaseClient.syncBudget(key, state.monthlyBudgets[key]);
+    const client = window.SupabaseClient || (typeof SupabaseClient !== 'undefined' ? SupabaseClient : null);
+    if (client) {
+      client.syncBudget(key, state.monthlyBudgets[key]).then(success => {
+        if (success) {
+          console.log('✅ Anggaran berhasil disinkronkan ke Supabase Cloud');
+        }
+      });
     }
   }
 
@@ -1334,7 +1357,10 @@ const RABApp = (function() {
   }
 
   function openAddTransactionModal(defaultDate = null) {
-    Security.assertAdmin('Menambah transaksi baru');
+    if (!Security.isAdmin()) {
+      openModal('adminPinModal');
+      return;
+    }
 
     const form = document.getElementById('transactionForm');
     if (!form) return;
@@ -1351,7 +1377,10 @@ const RABApp = (function() {
   }
 
   function openEditTransactionModal(id) {
-    Security.assertAdmin('Mengedit transaksi');
+    if (!Security.isAdmin()) {
+      openModal('adminPinModal');
+      return;
+    }
 
     const tx = state.transactions.find(t => t.id === id);
     if (!tx) return;
@@ -1370,7 +1399,10 @@ const RABApp = (function() {
   }
 
   function openEditBudgetModal() {
-    Security.assertAdmin('Mengedit anggaran bulanan');
+    if (!Security.isAdmin()) {
+      openModal('adminPinModal');
+      return;
+    }
 
     const budget = getCurrentMonthBudget();
     document.getElementById('budgetAmountInput').value = budget.initialAmount || '';
@@ -1594,7 +1626,17 @@ const RABApp = (function() {
       });
     }
 
+    const pinInput = document.getElementById('adminPinInput');
     const pinSubmitBtn = document.getElementById('adminPinSubmitBtn');
+    if (pinInput && pinSubmitBtn) {
+      pinInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          pinSubmitBtn.click();
+        }
+      });
+    }
+
     if (pinSubmitBtn) {
       pinSubmitBtn.addEventListener('click', async () => {
         const pinVal = document.getElementById('adminPinInput').value;
@@ -1602,7 +1644,6 @@ const RABApp = (function() {
         if (res.success) {
           closeModal('adminPinModal');
           renderAll();
-          alert('Berhasil masuk sebagai Admin! Anda sekarang dapat mengedit anggaran dan transaksi.');
         } else {
           alert(res.message || 'PIN salah! Silakan coba lagi.');
         }
@@ -1679,8 +1720,9 @@ const RABApp = (function() {
     renderAll();
 
     // Inisialisasi Sinkronisasi Supabase Cloud
-    if (window.SupabaseClient) {
-      SupabaseClient.onStatusChange((connected, msg) => {
+    const client = window.SupabaseClient || (typeof SupabaseClient !== 'undefined' ? SupabaseClient : null);
+    if (client) {
+      client.onStatusChange((connected, msg) => {
         const badge = document.getElementById('cloudSyncBadge');
         const text = document.getElementById('cloudSyncText');
         if (badge && text) {
@@ -1688,7 +1730,7 @@ const RABApp = (function() {
             badge.style.background = 'rgba(16, 185, 129, 0.15)';
             badge.style.color = '#10b981';
             badge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
-            text.textContent = 'Supabase: Cloud Aktif';
+            text.textContent = 'Supabase Cloud';
           } else {
             badge.style.background = 'rgba(245, 158, 11, 0.15)';
             badge.style.color = '#f59e0b';
@@ -1698,12 +1740,12 @@ const RABApp = (function() {
         }
       });
 
-      await SupabaseClient.testConnection();
-      const cloudTxs = await SupabaseClient.fetchTransactions();
+      await client.testConnection();
+      const cloudTxs = await client.fetchTransactions();
       if (cloudTxs && cloudTxs.length > 0) {
         state.transactions = cloudTxs;
       }
-      const cloudBudgets = await SupabaseClient.fetchBudgets();
+      const cloudBudgets = await client.fetchBudgets();
       if (cloudBudgets && Object.keys(cloudBudgets).length > 0) {
         state.monthlyBudgets = { ...state.monthlyBudgets, ...cloudBudgets };
       }

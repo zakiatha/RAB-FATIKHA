@@ -55,8 +55,9 @@ const SupabaseClient = (function() {
    */
   async function fetchTransactions() {
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rab_transactions?select=*&order=date.asc&_t=${Date.now()}`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rab_transactions?select=*&order=date.asc`, {
         method: 'GET',
+        cache: 'no-store',
         headers: {
           ...getHeaders(),
           'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -95,8 +96,9 @@ const SupabaseClient = (function() {
    */
   async function fetchBudgets() {
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rab_budgets?select=*&_t=${Date.now()}`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rab_budgets?select=*`, {
         method: 'GET',
+        cache: 'no-store',
         headers: {
           ...getHeaders(),
           'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -222,8 +224,9 @@ const SupabaseClient = (function() {
    */
   async function fetchCategories() {
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rab_categories?select=*&order=created_at.asc&_t=${Date.now()}`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rab_categories?select=*&order=created_at.asc`, {
         method: 'GET',
+        cache: 'no-store',
         headers: {
           ...getHeaders(),
           'Cache-Control': 'no-cache, no-store, must-revalidate',

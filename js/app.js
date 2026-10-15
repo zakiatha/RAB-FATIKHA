@@ -832,21 +832,35 @@ const RABApp = (function() {
     let savedCat = null;
 
     if (data.id) {
+      // Pastikan nama baru tidak bertabrakan dengan kategori lain (case-insensitive)
+      const duplicate = state.categories.find(c => c.id !== data.id && c.name.toLowerCase() === name.toLowerCase());
+      if (duplicate) {
+        alert(`Nama kategori "${name}" sudah digunakan oleh kategori lain! Silakan gunakan nama yang berbeda.`);
+        return false;
+      }
+
       const idx = state.categories.findIndex(c => c.id === data.id);
       if (idx !== -1) {
         state.categories[idx] = {
           ...state.categories[idx],
-          name: Security.sanitize(name),
+          name: name,
           icon: icon,
           color: color
         };
         savedCat = state.categories[idx];
       }
     } else {
+      // Cek duplikasi nama kategori baru (case-insensitive)
+      const existing = state.categories.find(c => c.name.toLowerCase() === name.toLowerCase());
+      if (existing) {
+        alert(`Kategori "${name}" sudah ada dalam daftar belanja! Silakan gunakan nama lain atau ubah kategori yang sudah ada.`);
+        return false;
+      }
+
       const newId = 'cat_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 4);
       const newCat = {
         id: newId,
-        name: Security.sanitize(name),
+        name: name,
         icon: icon,
         color: color,
         createdAt: new Date().toISOString()
@@ -2187,7 +2201,16 @@ const RABApp = (function() {
         if (typeof client.fetchCategories === 'function') {
           const cloudCats = await client.fetchCategories();
           if (Array.isArray(cloudCats) && cloudCats.length > 0) {
-            state.categories = cloudCats;
+            // Deduplikasi ID jika ada duplikat dalam database
+            const uniqueCats = [];
+            const seenIds = new Set();
+            cloudCats.forEach(c => {
+              if (c && c.id && !seenIds.has(c.id)) {
+                seenIds.add(c.id);
+                uniqueCats.push(c);
+              }
+            });
+            state.categories = uniqueCats;
           }
         }
 

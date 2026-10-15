@@ -55,9 +55,13 @@ const SupabaseClient = (function() {
    */
   async function fetchTransactions() {
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rab_transactions?select=*&order=date.asc`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rab_transactions?select=*&order=date.asc&_t=${Date.now()}`, {
         method: 'GET',
-        headers: getHeaders()
+        headers: {
+          ...getHeaders(),
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
       });
 
       if (!res.ok) {
@@ -91,9 +95,13 @@ const SupabaseClient = (function() {
    */
   async function fetchBudgets() {
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rab_budgets?select=*`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rab_budgets?select=*&_t=${Date.now()}`, {
         method: 'GET',
-        headers: getHeaders()
+        headers: {
+          ...getHeaders(),
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
       });
 
       if (!res.ok) {
@@ -209,13 +217,105 @@ const SupabaseClient = (function() {
     }
   }
 
+  /**
+   * Mengambil semua kategori belanja dari Supabase (rab_categories)
+   */
+  async function fetchCategories() {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rab_categories?select=*&order=created_at.asc&_t=${Date.now()}`, {
+        method: 'GET',
+        headers: {
+          ...getHeaders(),
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
+
+      if (!res.ok) {
+        console.warn('Tabel rab_categories belum dibuat di Supabase atau RLS belum aktif. Menggunakan data lokal.');
+        return null;
+      }
+
+      const rows = await res.json();
+      if (!Array.isArray(rows) || rows.length === 0) {
+        return null;
+      }
+
+      return rows.map(r => ({
+        id: r.id,
+        name: r.name,
+        color: r.color || '#10b981',
+        icon: r.icon || '🏷️',
+        createdAt: r.created_at
+      }));
+    } catch (e) {
+      console.warn('Koneksi Supabase offline saat mengambil kategori:', e.message);
+      return null;
+    }
+  }
+
+  /**
+   * Menyimpan / Upsert kategori ke Supabase (rab_categories)
+   */
+  async function syncCategory(cat) {
+    try {
+      const payload = {
+        id: cat.id,
+        name: cat.name,
+        color: cat.color || '#10b981',
+        icon: cat.icon || '🏷️',
+        created_at: cat.createdAt || new Date().toISOString()
+      };
+
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rab_categories`, {
+        method: 'POST',
+        headers: {
+          ...getHeaders(),
+          'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        setStatus(true, 'Kategori berhasil disimpan ke Cloud');
+        return true;
+      } else {
+        const errText = await res.text();
+        console.error('Supabase REST error saat simpan kategori:', res.status, errText);
+        return false;
+      }
+    } catch (e) {
+      console.warn('Gagal sinkron kategori ke Supabase (tersimpan di lokal):', e.message);
+      return false;
+    }
+  }
+
+  /**
+   * Menghapus kategori dari Supabase (rab_categories)
+   */
+  async function deleteCategory(id) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rab_categories?id=eq.${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: getHeaders()
+      });
+      return res.ok;
+    } catch (e) {
+      console.warn('Gagal menghapus kategori di Supabase:', e.message);
+      return false;
+    }
+  }
+
   const api = {
     testConnection,
     fetchTransactions,
     fetchBudgets,
+    fetchCategories,
     syncTransaction,
     deleteTransaction,
     syncBudget,
+    syncCategory,
+    deleteCategory,
     onStatusChange: (cb) => { onStatusChangeCallback = cb; },
     isConnected: () => isConnected,
     getUrl: () => SUPABASE_URL

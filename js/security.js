@@ -8,6 +8,7 @@ const Security = (function() {
 
   const STORAGE_KEY_ROLE = 'rab_current_role';
   const STORAGE_KEY_PIN_HASH = 'rab_admin_pin_hash';
+  const STORAGE_KEY_AUTH = 'rab_pin_authenticated';
   const DEFAULT_PIN = '1234';
 
   /**
@@ -35,9 +36,11 @@ const Security = (function() {
       const defaultHash = await hashPIN(DEFAULT_PIN);
       localStorage.setItem(STORAGE_KEY_PIN_HASH, defaultHash);
     }
-    // Default role is 'admin' (Akses Penuh) agar pemilik aplikasi dapat langsung menginput data
-    if (!localStorage.getItem(STORAGE_KEY_ROLE)) {
-      localStorage.setItem(STORAGE_KEY_ROLE, 'admin');
+    // Perangkat baru default-nya belum terautentikasi (mode 'user' / baca) sampai memasukkan PIN Admin
+    if (!localStorage.getItem(STORAGE_KEY_ROLE) || localStorage.getItem(STORAGE_KEY_AUTH) !== 'true') {
+      if (localStorage.getItem(STORAGE_KEY_AUTH) !== 'true') {
+        localStorage.setItem(STORAGE_KEY_ROLE, 'user');
+      }
     }
   }
 
@@ -61,17 +64,37 @@ const Security = (function() {
   }
 
   /**
-   * Cek apakah role saat ini adalah admin
+   * Cek apakah role saat ini adalah admin dan sudah terverifikasi PIN
    */
   function isAdmin() {
-    return (localStorage.getItem(STORAGE_KEY_ROLE) || 'admin') === 'admin';
+    return localStorage.getItem(STORAGE_KEY_ROLE) === 'admin' && localStorage.getItem(STORAGE_KEY_AUTH) === 'true';
+  }
+
+  /**
+   * Cek apakah perangkat ini sudah pernah memasukkan PIN Admin yang valid
+   */
+  function isAuthenticated() {
+    return localStorage.getItem(STORAGE_KEY_AUTH) === 'true';
+  }
+
+  /**
+   * Set status autentikasi manual
+   */
+  function setAuthenticated(status) {
+    if (status) {
+      localStorage.setItem(STORAGE_KEY_AUTH, 'true');
+      localStorage.setItem(STORAGE_KEY_ROLE, 'admin');
+    } else {
+      localStorage.removeItem(STORAGE_KEY_AUTH);
+      localStorage.setItem(STORAGE_KEY_ROLE, 'user');
+    }
   }
 
   /**
    * Dapatkan role saat ini ('admin' atau 'user')
    */
   function getCurrentRole() {
-    return localStorage.getItem(STORAGE_KEY_ROLE) || 'admin';
+    return isAdmin() ? 'admin' : 'user';
   }
 
   const STORAGE_KEY_ATTEMPTS = 'rab_pin_failed_attempts';
@@ -116,6 +139,7 @@ const Security = (function() {
       // Reset counter saat berhasil
       localStorage.removeItem(STORAGE_KEY_ATTEMPTS);
       localStorage.removeItem(STORAGE_KEY_LOCKOUT);
+      localStorage.setItem(STORAGE_KEY_AUTH, 'true');
       localStorage.setItem(STORAGE_KEY_ROLE, 'admin');
       return { success: true, locked: false };
     }
@@ -161,6 +185,7 @@ const Security = (function() {
    * Logout Admin kembali ke mode User (Read-Only)
    */
   function logoutAdmin() {
+    localStorage.removeItem(STORAGE_KEY_AUTH);
     localStorage.setItem(STORAGE_KEY_ROLE, 'user');
   }
 
@@ -222,6 +247,8 @@ const Security = (function() {
   const api = {
     sanitize,
     isAdmin,
+    isAuthenticated,
+    setAuthenticated,
     getCurrentRole,
     verifyAdminPIN,
     getLockoutStatus,

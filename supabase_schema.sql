@@ -20,11 +20,20 @@ CREATE TABLE IF NOT EXISTS public.rab_budgets (
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Tabel Daftar Kategori Belanja (Dinamis / Custom)
+CREATE TABLE IF NOT EXISTS public.rab_categories (
+    id TEXT PRIMARY KEY,                              -- ID Unik Kategori (cat_sayur, cat_protein, cat_bumbu, dll)
+    name TEXT NOT NULL,                               -- Nama Kategori (contoh: Sayur & Mayur)
+    color TEXT NOT NULL DEFAULT '#10b981',            -- Kode Warna Hex (#10b981)
+    icon TEXT NOT NULL DEFAULT '🏷️',                  -- Ikon Emoji ('🥦', '🥩', '🧄', dll)
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- Tabel Catatan & Rincian Transaksi Belanja
 CREATE TABLE IF NOT EXISTS public.rab_transactions (
     id TEXT PRIMARY KEY,                              -- ID Unik Transaksi
     date TEXT NOT NULL,                               -- Tanggal Belanja (YYYY-MM-DD)
-    category_id TEXT NOT NULL,                        -- ID Kategori (cat_sayur, cat_protein, cat_bumbu)
+    category_id TEXT NOT NULL,                        -- ID Kategori (cat_sayur, cat_protein, cat_bumbu, dll)
     item_name TEXT NOT NULL,                          -- Nama Belanja / Rincian Barang
     qty NUMERIC DEFAULT 1,                            -- Jumlah / Kuantitas
     unit TEXT DEFAULT 'paket',                        -- Satuan (paket, ikat, kg, sak, dll)
@@ -36,6 +45,7 @@ CREATE TABLE IF NOT EXISTS public.rab_transactions (
 -- --------------------------------------------------------------------
 -- 2. INDEXING UNTUK PERFORMA QUERY MAKSIMAL
 -- --------------------------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_rab_categories_created_at ON public.rab_categories (created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_rab_tx_date ON public.rab_transactions (date);
 CREATE INDEX IF NOT EXISTS idx_rab_tx_category ON public.rab_transactions (category_id);
 CREATE INDEX IF NOT EXISTS idx_rab_tx_created_at ON public.rab_transactions (created_at DESC);
@@ -44,7 +54,25 @@ CREATE INDEX IF NOT EXISTS idx_rab_tx_created_at ON public.rab_transactions (cre
 -- 3. KONFIGURASI ROW LEVEL SECURITY (RLS) - STANDAR KEAMANAN SUPABASE
 -- --------------------------------------------------------------------
 ALTER TABLE public.rab_budgets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.rab_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rab_transactions ENABLE ROW LEVEL SECURITY;
+
+-- Kebijakan RLS untuk rab_categories (Akses Publik / Anon Key & Authenticated)
+DROP POLICY IF EXISTS "Anon Select Categories" ON public.rab_categories;
+CREATE POLICY "Anon Select Categories" ON public.rab_categories
+    FOR SELECT TO public USING (true);
+
+DROP POLICY IF EXISTS "Anon Insert Categories" ON public.rab_categories;
+CREATE POLICY "Anon Insert Categories" ON public.rab_categories
+    FOR INSERT TO public WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Anon Update Categories" ON public.rab_categories;
+CREATE POLICY "Anon Update Categories" ON public.rab_categories
+    FOR UPDATE TO public USING (true);
+
+DROP POLICY IF EXISTS "Anon Delete Categories" ON public.rab_categories;
+CREATE POLICY "Anon Delete Categories" ON public.rab_categories
+    FOR DELETE TO public USING (true);
 
 -- Kebijakan RLS untuk rab_budgets (Akses Publik / Anon Key & Authenticated)
 DROP POLICY IF EXISTS "Anon Select Budgets" ON public.rab_budgets;
@@ -83,6 +111,18 @@ CREATE POLICY "Anon Delete Transactions" ON public.rab_transactions
 -- --------------------------------------------------------------------
 -- 4. INSERT DATA AWAL (SEED SAMPLE DATA)
 -- --------------------------------------------------------------------
+
+-- Data Kategori Awal (3 Kategori Utama Standar)
+INSERT INTO public.rab_categories (id, name, color, icon, created_at)
+VALUES 
+    ('cat_sayur', 'Sayur & Mayur', '#10b981', '🥦', NOW()),
+    ('cat_protein', 'Protein (Daging, Ikan, Telur)', '#f97316', '🥩', NOW()),
+    ('cat_bumbu', 'Bumbu & Minyak Dapur', '#8b5cf6', '🧄', NOW())
+ON CONFLICT (id) 
+DO UPDATE SET 
+    name = EXCLUDED.name,
+    color = EXCLUDED.color,
+    icon = EXCLUDED.icon;
 
 -- Data Pagu Anggaran Awal Bulan Ini (September 2026: Rp 300.000 / 300k)
 INSERT INTO public.rab_budgets (month_key, initial_amount, period_name, notes, updated_at)
@@ -153,8 +193,57 @@ DO UPDATE SET
     note = EXCLUDED.note;
 
 -- --------------------------------------------------------------------
--- 5. VERIFIKASI DATA (QUERY STATUS HASIL EKSEKUSI)
+-- 5. KOMENTAR DOKUMENTASI DATABASE (POSTGRESQL COMMENTS AGAR LEBIH RAPI)
 -- --------------------------------------------------------------------
+COMMENT ON TABLE public.rab_budgets IS 'Tabel Pagu Anggaran Multi-Month Bulanan Keluarga Fatikha';
+COMMENT ON COLUMN public.rab_budgets.month_key IS 'Format YYYY-MM (Kunci Primer Periode Bulan)';
+COMMENT ON COLUMN public.rab_budgets.initial_amount IS 'Nominal Pagu Anggaran dalam Rupiah';
+COMMENT ON COLUMN public.rab_budgets.period_name IS 'Label teks periode bulan (contoh: September 2026)';
+COMMENT ON COLUMN public.rab_budgets.notes IS 'Keterangan peruntukan pagu anggaran atau penanda anggaran khusus di luar bulan berjalan';
+
+COMMENT ON TABLE public.rab_categories IS 'Tabel Kategori Belanja Dinamis yang dapat ditambah, diedit, dan dihapus';
+COMMENT ON COLUMN public.rab_categories.id IS 'ID unik kategori (contoh: cat_sayur, cat_protein, cat_bumbu, dll)';
+COMMENT ON COLUMN public.rab_categories.name IS 'Nama Kategori Belanja';
+COMMENT ON COLUMN public.rab_categories.color IS 'Kode Warna Hex Kategori (#10b981)';
+COMMENT ON COLUMN public.rab_categories.icon IS 'Ikon Emoji Kategori (🥦, 🥩, 🧄)';
+
+COMMENT ON TABLE public.rab_transactions IS 'Tabel Catatan Realisasi Belanja Harian Keluarga Fatikha';
+COMMENT ON COLUMN public.rab_transactions.id IS 'ID unik transaksi belanja';
+COMMENT ON COLUMN public.rab_transactions.date IS 'Tanggal transaksi (YYYY-MM-DD)';
+COMMENT ON COLUMN public.rab_transactions.category_id IS 'ID Kategori belanja';
+COMMENT ON COLUMN public.rab_transactions.item_name IS 'Rincian belanja barang/bahan pangan';
+COMMENT ON COLUMN public.rab_transactions.amount IS 'Nominal biaya belanja (Rp)';
+COMMENT ON COLUMN public.rab_transactions.note IS 'Keterangan belanja. Jika dicatat di luar bulan aktif, otomatis diberi awalan tag [Luar Bulan Aktif: ...] agar database rapi';
+
+-- --------------------------------------------------------------------
+-- 6. VIEW PEMBANTU: MONITORING TRANSAKSI DI LUAR BULAN AKTIF / PERIODE
+-- --------------------------------------------------------------------
+CREATE OR REPLACE VIEW public.v_rab_transactions_out_of_month AS
+SELECT 
+    t.id,
+    t.date,
+    substring(t.date from 1 for 7) AS transaction_month,
+    t.category_id,
+    t.item_name,
+    t.amount,
+    t.note,
+    CASE 
+        WHEN t.note LIKE '[Luar Bulan Aktif:%' THEN 'Ditandai Otomatis di Luar Bulan'
+        ELSE 'Standar Periode'
+    END AS status_periode
+FROM public.rab_transactions t
+ORDER BY t.date DESC;
+
+COMMENT ON VIEW public.v_rab_transactions_out_of_month IS 'View pembantu untuk memantau transaksi belanja yang diberi catatan penanda di luar bulan pilihan';
+
+-- --------------------------------------------------------------------
+-- 7. VERIFIKASI DATA (QUERY STATUS HASIL EKSEKUSI)
+-- --------------------------------------------------------------------
+SELECT 
+    'public.rab_categories' AS nama_tabel, 
+    count(*) AS jumlah_data 
+FROM public.rab_categories
+UNION ALL
 SELECT 
     'public.rab_budgets' AS nama_tabel, 
     count(*) AS jumlah_data 

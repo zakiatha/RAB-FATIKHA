@@ -21,8 +21,8 @@
       </div>
 
       <div class="header-actions">
-        <!-- Cloud Sync Badge -->
-        <div id="cloudSyncBadge" class="role-badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.72rem;">
+        <!-- Cloud Sync Badge (Klik untuk Segarkan Data) -->
+        <div id="cloudSyncBadge" class="role-badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.72rem; cursor: pointer;" title="Klik untuk sinkronisasi ulang data terbaru dari Cloud">
           <span class="role-dot" style="background: #10b981;"></span>
           <span id="cloudSyncText"><span class="desktop-text">Supabase Cloud</span><span class="mobile-text">Cloud</span></span>
         </div>
@@ -319,11 +319,15 @@
 
     <!-- TAB SECTION 4: KELOLA KATEGORI & BUDGET -->
     <section id="tabSection_categories" class="tab-content-section">
-      <div class="section-title-wrap">
+      <div class="section-title-wrap" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
         <div>
-          <h3>3 Kategori Utama Belanja</h3>
-          <p style="font-size: 0.8rem; color: var(--text-secondary);">Kategori fokus untuk belanja dapur: Sayur & Mayur, Protein, dan Bumbu & Minyak Dapur</p>
+          <h3 id="categoriesSectionTitle">3 Kategori Utama Belanja</h3>
+          <p id="categoriesSectionDesc" style="font-size: 0.8rem; color: var(--text-secondary);">Kategori fokus untuk belanja dapur: Sayur & Mayur, Protein, dan Bumbu & Minyak Dapur</p>
         </div>
+        <button type="button" class="btn btn-primary btn-sm admin-only" id="btnOpenAddCategory" style="display: inline-flex; align-items: center; gap: 6px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Tambah Kategori
+        </button>
       </div>
 
       <div class="categories-management-grid" id="categoriesListContainer">
@@ -446,6 +450,9 @@
             <div class="form-group">
               <label class="form-label">Tanggal Belanja *</label>
               <input type="date" class="input-field" id="txDateInput" required>
+              <div id="txDateMonthWarning" style="display: none; margin-top: 6px; font-size: 0.75rem; color: #f59e0b; background: rgba(245, 158, 11, 0.1); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(245, 158, 11, 0.25); line-height: 1.3;">
+                ⚠️ Tanggal di luar bulan aktif (<strong id="txActiveMonthLabel"></strong>). Sistem otomatis menambahkan penanda rapi di database.
+              </div>
             </div>
             <div class="form-group">
               <label class="form-label">Kategori Barang *</label>
@@ -521,6 +528,80 @@
     </div>
   </div>
 
+  <!-- Modal: Tambah / Ubah Kategori Belanja -->
+  <div class="modal-overlay" id="categoryModal">
+    <div class="modal-box" style="max-width: 460px;">
+      <div class="modal-header">
+        <h4 class="modal-title" id="categoryModalTitle">Tambah Kategori Baru</h4>
+        <button type="button" class="btn-icon modal-close-btn" title="Tutup">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <form id="categoryForm">
+        <input type="hidden" id="catIdInput">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Nama Kategori *</label>
+            <input type="text" class="input-field" id="catNameInput" placeholder="Contoh: Sayur & Mayur, Buah Segar, Lauk..." required maxlength="40">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group" style="flex: 0 0 100px;">
+              <label class="form-label">Ikon Emoji</label>
+              <input type="text" class="input-field" id="catIconInput" value="🏷️" maxlength="4" style="font-size: 1.3rem; text-align: center;">
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">Warna Label</label>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <input type="color" class="input-color-circle" id="catColorInput" value="#10b981">
+                <input type="text" class="input-field" id="catColorTextInput" value="#10b981" style="font-family: monospace; font-size: 0.85rem;" maxlength="7">
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Emoji Selection -->
+          <div class="form-group" style="margin-top: -2px;">
+            <label class="form-label" style="font-size: 0.75rem; color: var(--text-muted);">Pilih Ikon Cepat:</label>
+            <div class="preset-emojis-wrap" id="presetEmojisWrap">
+              <button type="button" class="preset-emoji-btn" data-emoji="🥦">🥦</button>
+              <button type="button" class="preset-emoji-btn" data-emoji="🥩">🥩</button>
+              <button type="button" class="preset-emoji-btn" data-emoji="🧄">🧄</button>
+              <button type="button" class="preset-emoji-btn" data-emoji="🍎">🍎</button>
+              <button type="button" class="preset-emoji-btn" data-emoji="🍞">🍞</button>
+              <button type="button" class="preset-emoji-btn" data-emoji="🥚">🥚</button>
+              <button type="button" class="preset-emoji-btn" data-emoji="☕">☕</button>
+              <button type="button" class="preset-emoji-btn" data-emoji="🧃">🧃</button>
+              <button type="button" class="preset-emoji-btn" data-emoji="🧼">🧼</button>
+              <button type="button" class="preset-emoji-btn" data-emoji="💊">💊</button>
+              <button type="button" class="preset-emoji-btn" data-emoji="🛒">🛒</button>
+              <button type="button" class="preset-emoji-btn" data-emoji="🏷️">🏷️</button>
+            </div>
+          </div>
+
+          <!-- Quick Color Selection -->
+          <div class="form-group">
+            <label class="form-label" style="font-size: 0.75rem; color: var(--text-muted);">Pilihan Warna Label:</label>
+            <div class="preset-colors-wrap" id="presetColorsWrap">
+              <span class="preset-color-chip" data-color="#10b981" style="background-color: #10b981;" title="Emerald"></span>
+              <span class="preset-color-chip" data-color="#f97316" style="background-color: #f97316;" title="Orange"></span>
+              <span class="preset-color-chip" data-color="#8b5cf6" style="background-color: #8b5cf6;" title="Purple"></span>
+              <span class="preset-color-chip" data-color="#3b82f6" style="background-color: #3b82f6;" title="Blue"></span>
+              <span class="preset-color-chip" data-color="#ec4899" style="background-color: #ec4899;" title="Pink"></span>
+              <span class="preset-color-chip" data-color="#eab308" style="background-color: #eab308;" title="Amber"></span>
+              <span class="preset-color-chip" data-color="#06b6d4" style="background-color: #06b6d4;" title="Cyan"></span>
+              <span class="preset-color-chip" data-color="#ef4444" style="background-color: #ef4444;" title="Red"></span>
+              <span class="preset-color-chip" data-color="#64748b" style="background-color: #64748b;" title="Slate"></span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline modal-close-btn">Batal</button>
+          <button type="submit" class="btn btn-primary" id="btnSaveCategory">Simpan Kategori</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Modal: Detail Pengeluaran Harian dari Kalender -->
   <div class="modal-overlay" id="dayDetailModal">
     <div class="modal-box">
@@ -549,33 +630,42 @@
 
   <!-- Modal: Masuk PIN Admin -->
   <div class="modal-overlay" id="adminPinModal">
-    <div class="modal-box" style="max-width: 400px;">
+    <div class="modal-box" style="max-width: 420px;">
       <div class="modal-header">
-        <h4 class="modal-title">Autentikasi Mode Admin</h4>
+        <h4 class="modal-title" id="adminPinModalTitle">Autentikasi Mode Admin</h4>
         <button type="button" class="btn-icon modal-close-btn" title="Tutup">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
       <div class="modal-body">
-        <p style="font-size: 0.85rem; color: var(--text-secondary);">
+        <!-- Banner sambutan khusus saat HP / perangkat baru pertama kali membuka web -->
+        <div id="adminPinWelcomeBanner" style="display: none; margin-bottom: 14px; padding: 10px 14px; background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 8px; font-size: 0.84rem; color: #818cf8; line-height: 1.4;">
+          👋 <strong>Selamat Datang di Sistem RAB!</strong><br>
+          Demi keamanan data anggaran keluarga, silakan masukkan PIN Admin terlebih dahulu.
+        </div>
+
+        <p id="adminPinModalDesc" style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;">
           Masukkan PIN Keamanan Admin untuk mendapatkan hak akses mengubah anggaran dan mencatat belanja.
         </p>
+
         <div class="form-group">
-          <label class="form-label">PIN Admin (Default: 1234)</label>
-          <input type="password" class="input-field" id="adminPinInput" placeholder="Masukkan 4 digit PIN..." maxlength="10" autocomplete="off" style="letter-spacing: 0.3em; font-size: 1.1rem; text-align: center;">
+          <label class="form-label" id="adminPinLabel">PIN Admin (Default: 1234)</label>
+          <input type="password" class="input-field" id="adminPinInput" placeholder="••••" maxlength="10" autocomplete="off" style="letter-spacing: 0.35em; font-size: 1.3rem; text-align: center; font-weight: 700;">
         </div>
+
+        <div id="adminPinAlertBox" style="display: none; margin-top: 8px; font-size: 0.8rem; padding: 8px 12px; border-radius: 6px; line-height: 1.4;"></div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline modal-close-btn">Batal</button>
+      <div class="modal-footer" style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button type="button" class="btn btn-outline modal-close-btn" id="adminPinCancelBtn">Batal</button>
         <button type="submit" class="btn btn-primary" id="adminPinSubmitBtn">Verifikasi PIN</button>
       </div>
     </div>
   </div>
 
   <!-- Scripts -->
-  <script src="js/security.js?v=20260908b"></script>
-  <script src="js/supabase.js?v=20260908b"></script>
-  <script src="js/calendar.js?v=20260908_fix1"></script>
-  <script src="js/app.js?v=20260908_fix1"></script>
+  <script src="js/security.js?v=20261015_custom_categories"></script>
+  <script src="js/supabase.js?v=20261015_custom_categories"></script>
+  <script src="js/calendar.js?v=20261015_custom_categories"></script>
+  <script src="js/app.js?v=20261015_custom_categories"></script>
 </body>
 </html>

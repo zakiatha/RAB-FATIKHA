@@ -120,8 +120,12 @@ const RABApp = (function() {
         state.monthlyBudgets = parsed.monthlyBudgets || {};
         state.transactions = parsed.transactions || [];
 
-        // Migrasi atau filter agar hanya 3 kategori utama yang aktif
-        state.categories = defaultCategories;
+        // Muat kategori kustom tersimpan, atau gunakan defaultCategories jika belum ada
+        if (Array.isArray(parsed.categories) && parsed.categories.length > 0) {
+          state.categories = parsed.categories;
+        } else {
+          state.categories = [...defaultCategories];
+        }
 
         // Migrasi format lama jika ada
         if (parsed.budget && Object.keys(state.monthlyBudgets).length === 0) {
@@ -133,20 +137,20 @@ const RABApp = (function() {
           };
         }
       } else {
-        // First load
+        // First load: inisialisasi state bersih agar sinkronisasi cloud akurat jika database kosong
         const key = getActiveMonthKey();
         state.monthlyBudgets[key] = {
           initialAmount: 300000,
           periodName: `${monthNamesID[state.selectedMonth]} ${state.selectedYear}`,
-          notes: 'Anggaran belanja dapur bulanan'
+          notes: 'Anggaran belanja bulanan'
         };
         state.categories = [...defaultCategories];
-        state.transactions = getSampleTransactions();
+        state.transactions = []; // Jangan paksa data dummy agar data kosong di cloud tidak tertimpa
         saveData();
       }
     } catch (e) {
       console.error('Gagal memuat data LocalStorage:', e);
-      state.transactions = getSampleTransactions();
+      state.transactions = [];
     }
   }
 
@@ -199,7 +203,7 @@ const RABApp = (function() {
   }
 
   function getCategoryById(id) {
-    return state.categories.find(c => c.id === id) || {
+    return state.categories.find(c => c.id === id) || state.categories[0] || {
       id: 'cat_sayur',
       name: 'Sayur & Mayur',
       color: '#10b981',
@@ -633,49 +637,288 @@ const RABApp = (function() {
   }
 
   /**
-   * Render Bagian Kategori (Hanya 3 Kategori Utama)
+   * Render Bagian Kategori (Dinamis: Tambah, Edit, Hapus/Kurangi Kategori)
    */
   function renderCategoriesManagement() {
     const container = document.getElementById('categoriesListContainer');
     const selectFilter = document.getElementById('filterCategorySelect');
     const selectModal = document.getElementById('txCategoryInput');
+    const titleEl = document.getElementById('categoriesSectionTitle');
+    const descEl = document.getElementById('categoriesSectionDesc');
+    const breakdownTitleEl = document.getElementById('categoryBreakdownTitle');
     if (!container) return;
 
+    if (titleEl) {
+      titleEl.textContent = `${state.categories.length} Kategori Belanja`;
+    }
+    if (descEl) {
+      const names = state.categories.map(c => c.name).join(', ');
+      descEl.textContent = `Kategori aktif belanja dapur: ${names}`;
+    }
+    if (breakdownTitleEl) {
+      breakdownTitleEl.textContent = `Alokasi Pengeluaran (${state.categories.length} Kategori Belanja)`;
+    }
+
+    const isAdmin = Security.isAdmin();
     let html = '';
+
     state.categories.forEach(cat => {
       const txCount = state.transactions.filter(t => t.categoryId === cat.id).length;
+      const isDefault = cat.id === 'cat_sayur' || cat.id === 'cat_protein' || cat.id === 'cat_bumbu';
+      const badgeLabel = isDefault ? 'Kategori Utama' : 'Kategori Kustom';
+
       html += `
-        <div class="category-item-card">
+        <div class="category-item-card" data-cat-id="${cat.id}">
           <div class="cat-badge-info">
             <span class="cat-circle-icon" style="background-color: ${cat.color}">${cat.icon || '🏷️'}</span>
             <div class="cat-text-info">
-              <span class="cat-item-title">${Security.sanitize(cat.name)}</span>
+              <span class="cat-item-title" title="${Security.sanitize(cat.name)}">${Security.sanitize(cat.name)}</span>
               <span class="cat-item-subtitle">${txCount} transaksi tercatat</span>
             </div>
           </div>
-          <span class="badge-readonly" style="color: ${cat.color}">Kategori Utama</span>
+          <div class="cat-right-wrap">
+            <span class="cat-pill-badge" style="background: ${cat.color}22; color: ${cat.color}; border: 1px solid ${cat.color}44;">
+              ${badgeLabel}
+            </span>
+            ${isAdmin ? `
+              <div class="cat-actions-group">
+                <button type="button" class="btn-cat-action btn-cat-edit" data-id="${cat.id}" title="Ubah Nama/Warna Kategori">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button type="button" class="btn-cat-action btn-cat-delete" data-id="${cat.id}" title="Hapus Kategori">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              </div>
+            ` : ''}
+          </div>
         </div>
       `;
     });
 
+    // Tambahkan kartu dashed '+ Tambah Kategori' di akhir grid
+    if (isAdmin) {
+      html += `
+        <div class="category-add-card" id="btnAddCategoryCard" role="button" tabindex="0" title="Klik untuk menambah kategori baru">
+          <div class="cat-add-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="cat-add-text">
+            <span class="cat-add-title">+ Tambah Kategori</span>
+            <span class="cat-add-sub">Sesuaikan kebutuhan belanja dapur</span>
+          </div>
+        </div>
+      `;
+    }
+
     container.innerHTML = html;
+
+    // Pasang Event Listeners tombol Edit & Hapus
+    container.querySelectorAll('.btn-cat-edit').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute('data-id');
+        openEditCategoryModal(id);
+      });
+    });
+
+    container.querySelectorAll('.btn-cat-delete').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute('data-id');
+        deleteCategory(id);
+      });
+    });
+
+    const addCard = document.getElementById('btnAddCategoryCard');
+    if (addCard) {
+      addCard.addEventListener('click', () => {
+        openAddCategoryModal();
+      });
+    }
 
     if (selectFilter) {
       const currentSelected = selectFilter.value;
-      let options = `<option value="all">Semua Kategori (3 Kategori)</option>`;
+      let options = `<option value="all">Semua Kategori (${state.categories.length} Kategori)</option>`;
       state.categories.forEach(cat => {
-        options += `<option value="${cat.id}">${cat.icon || ''} ${Security.sanitize(cat.name)}</option>`;
+        options += `<option value="${cat.id}">${cat.icon || '🏷️'} ${Security.sanitize(cat.name)}</option>`;
       });
       selectFilter.innerHTML = options;
-      if (currentSelected) selectFilter.value = currentSelected;
+      if (currentSelected && (currentSelected === 'all' || state.categories.some(c => c.id === currentSelected))) {
+        selectFilter.value = currentSelected;
+      }
     }
 
     if (selectModal) {
+      const currentSelected = selectModal.value;
       let modalOptions = '';
       state.categories.forEach(cat => {
-        modalOptions += `<option value="${cat.id}">${cat.icon || ''} ${Security.sanitize(cat.name)}</option>`;
+        modalOptions += `<option value="${cat.id}">${cat.icon || '🏷️'} ${Security.sanitize(cat.name)}</option>`;
       });
       selectModal.innerHTML = modalOptions;
+      if (currentSelected && state.categories.some(c => c.id === currentSelected)) {
+        selectModal.value = currentSelected;
+      }
+    }
+  }
+
+  function openAddCategoryModal() {
+    if (!Security.isAdmin()) {
+      openAdminPinModal();
+      return;
+    }
+    const modal = document.getElementById('categoryModal');
+    const title = document.getElementById('categoryModalTitle');
+    const idInput = document.getElementById('catIdInput');
+    const nameInput = document.getElementById('catNameInput');
+    const iconInput = document.getElementById('catIconInput');
+    const colorInput = document.getElementById('catColorInput');
+    const colorTextInput = document.getElementById('catColorTextInput');
+
+    if (!modal) return;
+    if (title) title.textContent = 'Tambah Kategori Baru';
+    if (idInput) idInput.value = '';
+    if (nameInput) nameInput.value = '';
+    if (iconInput) iconInput.value = '🏷️';
+    if (colorInput) colorInput.value = '#10b981';
+    if (colorTextInput) colorTextInput.value = '#10b981';
+
+    openModal('categoryModal');
+    if (nameInput) setTimeout(() => nameInput.focus(), 150);
+  }
+
+  function openEditCategoryModal(id) {
+    if (!Security.isAdmin()) {
+      openAdminPinModal();
+      return;
+    }
+    const cat = state.categories.find(c => c.id === id);
+    if (!cat) return;
+
+    const modal = document.getElementById('categoryModal');
+    const title = document.getElementById('categoryModalTitle');
+    const idInput = document.getElementById('catIdInput');
+    const nameInput = document.getElementById('catNameInput');
+    const iconInput = document.getElementById('catIconInput');
+    const colorInput = document.getElementById('catColorInput');
+    const colorTextInput = document.getElementById('catColorTextInput');
+
+    if (!modal) return;
+    if (title) title.textContent = `Ubah Kategori: ${cat.name}`;
+    if (idInput) idInput.value = cat.id;
+    if (nameInput) nameInput.value = cat.name;
+    if (iconInput) iconInput.value = cat.icon || '🏷️';
+    const cColor = cat.color || '#10b981';
+    if (colorInput) colorInput.value = cColor;
+    if (colorTextInput) colorTextInput.value = cColor;
+
+    openModal('categoryModal');
+    if (nameInput) setTimeout(() => nameInput.focus(), 150);
+  }
+
+  function saveCategory(data) {
+    if (!Security.isAdmin()) {
+      openAdminPinModal();
+      return false;
+    }
+
+    const name = (data.name || '').trim();
+    if (!name) {
+      alert('Nama kategori belanja tidak boleh kosong.');
+      return false;
+    }
+
+    const icon = (data.icon || '').trim() || '🏷️';
+    const color = (data.color || '#10b981').trim();
+    let savedCat = null;
+
+    if (data.id) {
+      const idx = state.categories.findIndex(c => c.id === data.id);
+      if (idx !== -1) {
+        state.categories[idx] = {
+          ...state.categories[idx],
+          name: Security.sanitize(name),
+          icon: icon,
+          color: color
+        };
+        savedCat = state.categories[idx];
+      }
+    } else {
+      const newId = 'cat_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 4);
+      const newCat = {
+        id: newId,
+        name: Security.sanitize(name),
+        icon: icon,
+        color: color,
+        createdAt: new Date().toISOString()
+      };
+      state.categories.push(newCat);
+      savedCat = newCat;
+    }
+
+    saveData();
+    renderAll();
+
+    // Sinkronisasi Supabase Cloud
+    const client = window.SupabaseClient || (typeof SupabaseClient !== 'undefined' ? SupabaseClient : null);
+    if (savedCat && client) {
+      client.syncCategory(savedCat).then(success => {
+        if (success) {
+          console.log('✅ Kategori berhasil disinkronkan ke Supabase Cloud:', savedCat.name);
+        }
+      });
+    }
+
+    return true;
+  }
+
+  function deleteCategory(id) {
+    if (!Security.isAdmin()) {
+      openAdminPinModal();
+      return;
+    }
+
+    if (state.categories.length <= 1) {
+      alert('Minimal harus ada 1 kategori belanja dalam sistem.');
+      return;
+    }
+
+    const cat = state.categories.find(c => c.id === id);
+    if (!cat) return;
+
+    const usedTxs = state.transactions.filter(t => t.categoryId === id);
+    let confirmMsg = `Apakah Anda yakin ingin menghapus kategori "${cat.name}"?`;
+
+    if (usedTxs.length > 0) {
+      const fallbackCat = state.categories.find(c => c.id !== id);
+      confirmMsg = `Kategori "${cat.name}" saat ini memiliki ${usedTxs.length} catatan transaksi.\n\nJika dihapus, ${usedTxs.length} transaksi tersebut otomatis dialihkan ke kategori "${fallbackCat.name}".\n\nLanjutkan penghapusan kategori?`;
+    }
+
+    if (confirm(confirmMsg)) {
+      if (usedTxs.length > 0) {
+        const fallbackCat = state.categories.find(c => c.id !== id);
+        state.transactions.forEach(t => {
+          if (t.categoryId === id) {
+            t.categoryId = fallbackCat.id;
+          }
+        });
+        const client = window.SupabaseClient || (typeof SupabaseClient !== 'undefined' ? SupabaseClient : null);
+        if (client) {
+          usedTxs.forEach(t => client.syncTransaction(t));
+        }
+      }
+
+      state.categories = state.categories.filter(c => c.id !== id);
+      saveData();
+      renderAll();
+
+      const client = window.SupabaseClient || (typeof SupabaseClient !== 'undefined' ? SupabaseClient : null);
+      if (client) {
+        client.deleteCategory(id).then(success => {
+          if (success) {
+            console.log('✅ Kategori berhasil dihapus dari Supabase Cloud');
+          }
+        });
+      }
     }
   }
 
@@ -758,19 +1001,33 @@ const RABApp = (function() {
       return false;
     }
 
+    const activeKey = getActiveMonthKey();
+    const txDateStr = date || new Date().toISOString().split('T')[0];
+    const txMonthKey = txDateStr.slice(0, 7);
+    let finalNote = Security.sanitize(note ? note.trim() : '');
+
+    // Komen Database jika transaksi/anggaran dicatat di luar bulan aktif pilihan agar database rapi
+    if (txMonthKey && txMonthKey !== activeKey) {
+      const activePeriodLabel = `${monthNamesID[state.selectedMonth]} ${state.selectedYear}`;
+      const outOfMonthTag = `[Luar Bulan Aktif: ${activePeriodLabel}]`;
+      if (!finalNote.includes(outOfMonthTag)) {
+        finalNote = finalNote ? `${outOfMonthTag} ${finalNote}` : outOfMonthTag;
+      }
+    }
+
     let savedTx = null;
     if (id) {
       const idx = state.transactions.findIndex(t => t.id === id);
       if (idx !== -1) {
         state.transactions[idx] = {
           ...state.transactions[idx],
-          date: date || new Date().toISOString().split('T')[0],
+          date: txDateStr,
           categoryId: categoryId || 'cat_sayur',
           itemName: Security.sanitize(itemName.trim()),
           qty: qty ? Number(qty) : null,
           unit: Security.sanitize(unit ? unit.trim() : ''),
           amount: Number(amount),
-          note: Security.sanitize(note ? note.trim() : ''),
+          note: finalNote,
           updatedAt: new Date().toISOString()
         };
         savedTx = state.transactions[idx];
@@ -778,13 +1035,13 @@ const RABApp = (function() {
     } else {
       const newTx = {
         id: 'tx_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-        date: date || new Date().toISOString().split('T')[0],
+        date: txDateStr,
         categoryId: categoryId || 'cat_sayur',
         itemName: Security.sanitize(itemName.trim()),
         qty: qty ? Number(qty) : null,
         unit: Security.sanitize(unit ? unit.trim() : ''),
         amount: Number(amount),
-        note: Security.sanitize(note ? note.trim() : ''),
+        note: finalNote,
         createdAt: new Date().toISOString()
       };
       state.transactions.push(newTx);
@@ -810,7 +1067,7 @@ const RABApp = (function() {
 
   function deleteTransaction(id) {
     if (!Security.isAdmin()) {
-      openModal('adminPinModal');
+      openAdminPinModal();
       return;
     }
 
@@ -839,15 +1096,28 @@ const RABApp = (function() {
    */
   function updateMonthBudget(amount, periodName, notes) {
     if (!Security.isAdmin()) {
-      openModal('adminPinModal');
+      openAdminPinModal();
       return;
     }
 
     const key = getActiveMonthKey();
+    let sanitizedNotes = Security.sanitize(notes || '');
+    const now = new Date();
+    const curCalMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const periodLabel = Security.sanitize(periodName || `${monthNamesID[state.selectedMonth]} ${state.selectedYear}`);
+
+    // Komen Database jika pagu diatur untuk periode selain bulan kalender berjalan
+    if (key !== curCalMonthKey) {
+      const periodTag = `[Periode Anggaran: ${periodLabel}]`;
+      if (!sanitizedNotes.includes(periodTag)) {
+        sanitizedNotes = sanitizedNotes ? `${periodTag} ${sanitizedNotes}` : periodTag;
+      }
+    }
+
     state.monthlyBudgets[key] = {
       initialAmount: Number(amount),
-      periodName: Security.sanitize(periodName || `${monthNamesID[state.selectedMonth]} ${state.selectedYear}`),
-      notes: Security.sanitize(notes || '')
+      periodName: periodLabel,
+      notes: sanitizedNotes
     };
 
     saveData();
@@ -880,18 +1150,19 @@ const RABApp = (function() {
     const persentase = initialAmount > 0 ? ((totalSpent / initialAmount) * 100).toFixed(1) : 0;
     const isSurplus = sisaSaldo >= 0;
 
-    // Hitung per kategori
-    const catTotals = {
-      cat_sayur: { name: 'Sayur & Mayur', total: 0, count: 0 },
-      cat_protein: { name: 'Protein (Daging, Ikan, Telur)', total: 0, count: 0 },
-      cat_bumbu: { name: 'Bumbu & Minyak Dapur', total: 0, count: 0 }
-    };
+    // Hitung per kategori dinamis
+    const catTotals = {};
+    state.categories.forEach(c => {
+      catTotals[c.id] = { name: c.name, total: 0, count: 0 };
+    });
 
     monthTxs.forEach(tx => {
-      if (catTotals[tx.categoryId]) {
-        catTotals[tx.categoryId].total += Number(tx.amount || 0);
-        catTotals[tx.categoryId].count += 1;
+      if (!catTotals[tx.categoryId]) {
+        const fallback = getCategoryById(tx.categoryId);
+        catTotals[tx.categoryId] = { name: fallback.name, total: 0, count: 0 };
       }
+      catTotals[tx.categoryId].total += Number(tx.amount || 0);
+      catTotals[tx.categoryId].count += 1;
     });
 
     // Bangun HTML Workbook untuk Microsoft Excel
@@ -1020,10 +1291,10 @@ const RABApp = (function() {
 
         <br>
 
-        <!-- SECTION 3: REKAPITULASI 3 KATEGORI UTAMA -->
+        <!-- SECTION 3: REKAPITULASI KATEGORI BELANJA -->
         <table>
           <tr>
-            <td colspan="5" class="section-title">C. REKAPITULASI PENGELUARAN 3 KATEGORI UTAMA</td>
+            <td colspan="5" class="section-title">C. REKAPITULASI PENGELUARAN PER KATEGORI</td>
           </tr>
           <tr class="bg-light">
             <th style="width: 8%;">No</th>
@@ -1034,14 +1305,13 @@ const RABApp = (function() {
           </tr>
     `;
 
-    const catKeys = ['cat_sayur', 'cat_protein', 'cat_bumbu'];
-    catKeys.forEach((key, idx) => {
-      const c = catTotals[key];
+    state.categories.forEach((cat, idx) => {
+      const c = catTotals[cat.id] || { name: cat.name, count: 0, total: 0 };
       const prop = totalSpent > 0 ? ((c.total / totalSpent) * 100).toFixed(1) : 0;
       excelHTML += `
           <tr>
             <td class="text-center">${idx + 1}</td>
-            <td class="bold">${c.name}</td>
+            <td class="bold">${Security.sanitize(c.name)}</td>
             <td class="text-center">${c.count} transaksi</td>
             <td class="num-format">Rp ${c.total.toLocaleString('id-ID')}</td>
             <td class="text-center">${prop}%</td>
@@ -1136,46 +1406,46 @@ const RABApp = (function() {
       chipRatio.innerHTML = `Rasio: <strong>${rasio}%</strong>`;
     }
 
-    // Hitung pengeluaran per 3 kategori
-    const catTotals = {
-      cat_sayur: { name: 'Sayur & Mayur', total: 0, count: 0, color: '#10b981', icon: '🥦' },
-      cat_protein: { name: 'Protein (Daging, Ikan, Telur)', total: 0, count: 0, color: '#f97316', icon: '🥩' },
-      cat_bumbu: { name: 'Bumbu & Minyak Dapur', total: 0, count: 0, color: '#8b5cf6', icon: '🧄' }
-    };
+    // Hitung pengeluaran per kategori dinamis
+    const catTotals = {};
+    state.categories.forEach(c => {
+      catTotals[c.id] = { name: c.name, total: 0, count: 0, color: c.color, icon: c.icon };
+    });
 
     monthTxs.forEach(tx => {
-      if (catTotals[tx.categoryId]) {
-        catTotals[tx.categoryId].total += Number(tx.amount || 0);
-        catTotals[tx.categoryId].count += 1;
+      if (!catTotals[tx.categoryId]) {
+        const fallback = getCategoryById(tx.categoryId);
+        catTotals[tx.categoryId] = { name: fallback.name, total: 0, count: 0, color: fallback.color, icon: fallback.icon };
       }
+      catTotals[tx.categoryId].total += Number(tx.amount || 0);
+      catTotals[tx.categoryId].count += 1;
     });
 
     if (tableBody) {
-      tableBody.innerHTML = `
+      let rowsHtml = `
         <tr>
           <td><strong>1. Pagu Anggaran Masuk (Debet)</strong><br><small style="color:var(--text-muted)">Alokasi belanja awal</small></td>
           <td class="text-right" style="color:var(--success); font-weight:700;">${Security.formatRupiah(initialAmount)}</td>
           <td class="text-right">-</td>
           <td class="text-right font-bold">${Security.formatRupiah(initialAmount)}</td>
         </tr>
-        <tr>
-          <td><strong>2. Belanja Sayur & Mayur</strong><br><small style="color:var(--text-muted)">${catTotals.cat_sayur.count} transaksi</small></td>
-          <td class="text-right">-</td>
-          <td class="text-right" style="color:var(--danger);">${Security.formatRupiah(catTotals.cat_sayur.total)}</td>
-          <td class="text-right">-</td>
-        </tr>
-        <tr>
-          <td><strong>3. Belanja Protein</strong><br><small style="color:var(--text-muted)">${catTotals.cat_protein.count} transaksi</small></td>
-          <td class="text-right">-</td>
-          <td class="text-right" style="color:var(--danger);">${Security.formatRupiah(catTotals.cat_protein.total)}</td>
-          <td class="text-right">-</td>
-        </tr>
-        <tr>
-          <td><strong>4. Belanja Bumbu & Minyak Dapur</strong><br><small style="color:var(--text-muted)">${catTotals.cat_bumbu.count} transaksi</small></td>
-          <td class="text-right">-</td>
-          <td class="text-right" style="color:var(--danger);">${Security.formatRupiah(catTotals.cat_bumbu.total)}</td>
-          <td class="text-right">-</td>
-        </tr>
+      `;
+
+      let rowNum = 2;
+      state.categories.forEach(cat => {
+        const item = catTotals[cat.id] || { count: 0, total: 0 };
+        rowsHtml += `
+          <tr>
+            <td><strong>${rowNum}. Belanja ${Security.sanitize(cat.name)}</strong><br><small style="color:var(--text-muted)">${item.count} transaksi</small></td>
+            <td class="text-right">-</td>
+            <td class="text-right" style="color:var(--danger);">${Security.formatRupiah(item.total)}</td>
+            <td class="text-right">-</td>
+          </tr>
+        `;
+        rowNum++;
+      });
+
+      rowsHtml += `
         <tr class="total-row">
           <td><strong>TOTAL REALISASI BELANJA (KREDIT)</strong></td>
           <td class="text-right">-</td>
@@ -1188,6 +1458,8 @@ const RABApp = (function() {
           <td class="text-right" style="font-size:1.05rem;">${Security.formatRupiah(sisaSaldo)}</td>
         </tr>
       `;
+
+      tableBody.innerHTML = rowsHtml;
     }
 
     // 2. Render Bar Chart (Tren Pengeluaran Harian)
@@ -1280,13 +1552,13 @@ const RABApp = (function() {
     const radius = 65;
     const circumference = 2 * Math.PI * radius; // ~408.4
 
-    const keys = ['cat_sayur', 'cat_protein', 'cat_bumbu'];
+    const keys = state.categories.map(c => c.id);
     let accumulatedPercent = 0;
     let svgSlices = '';
     let legendHtml = '';
 
     keys.forEach(key => {
-      const cat = catTotals[key];
+      const cat = catTotals[key] || { name: 'Kategori', total: 0, color: '#64748b', icon: '🏷️' };
       const share = totalSpent > 0 ? (cat.total / totalSpent) : 0;
       const percent = (share * 100).toFixed(1);
       const dashLength = share * circumference;
@@ -1356,9 +1628,68 @@ const RABApp = (function() {
     }
   }
 
+  /**
+   * Cek apakah tanggal belanja berada di luar bulan aktif, dan tampilkan peringatan rapi
+   */
+  function checkTxDateOutOfMonth(dateVal) {
+    const warningEl = document.getElementById('txDateMonthWarning');
+    const labelEl = document.getElementById('txActiveMonthLabel');
+    if (!warningEl) return;
+
+    const activeKey = getActiveMonthKey();
+    const txKey = (dateVal || '').slice(0, 7);
+
+    if (txKey && txKey !== activeKey) {
+      if (labelEl) {
+        labelEl.textContent = `${monthNamesID[state.selectedMonth]} ${state.selectedYear}`;
+      }
+      warningEl.style.display = 'block';
+    } else {
+      warningEl.style.display = 'none';
+    }
+  }
+
+  /**
+   * Buka Modal Input PIN Admin (Mendukung sambutan bagi pengguna HP / perangkat baru)
+   */
+  function openAdminPinModal(isInitialPrompt = false) {
+    const modalTitle = document.getElementById('adminPinModalTitle');
+    const modalDesc = document.getElementById('adminPinModalDesc');
+    const welcomeBanner = document.getElementById('adminPinWelcomeBanner');
+    const cancelBtn = document.getElementById('adminPinCancelBtn');
+    const alertBox = document.getElementById('adminPinAlertBox');
+    const pinInput = document.getElementById('adminPinInput');
+
+    if (alertBox) {
+      alertBox.style.display = 'none';
+      alertBox.textContent = '';
+    }
+
+    if (pinInput) {
+      pinInput.value = '';
+    }
+
+    if (isInitialPrompt) {
+      if (modalTitle) modalTitle.textContent = 'Autentikasi Akses RAB';
+      if (welcomeBanner) welcomeBanner.style.display = 'block';
+      if (modalDesc) modalDesc.textContent = 'Silakan masukkan PIN Admin terlebih dahulu untuk membuka akses penuh pencatatan anggaran & belanja.';
+      if (cancelBtn) cancelBtn.textContent = 'Lanjut sebagai Tamu (Hanya Lihat)';
+    } else {
+      if (modalTitle) modalTitle.textContent = 'Autentikasi Mode Admin';
+      if (welcomeBanner) welcomeBanner.style.display = 'none';
+      if (modalDesc) modalDesc.textContent = 'Masukkan PIN Keamanan Admin untuk mendapatkan hak akses mengubah anggaran dan mencatat belanja.';
+      if (cancelBtn) cancelBtn.textContent = 'Batal';
+    }
+
+    openModal('adminPinModal');
+    if (pinInput) {
+      setTimeout(() => pinInput.focus(), 250);
+    }
+  }
+
   function openAddTransactionModal(defaultDate = null) {
     if (!Security.isAdmin()) {
-      openModal('adminPinModal');
+      openAdminPinModal();
       return;
     }
 
@@ -1371,14 +1702,18 @@ const RABApp = (function() {
 
     const curMonthStr = String(state.selectedMonth + 1).padStart(2, '0');
     const todayStr = defaultDate || `${state.selectedYear}-${curMonthStr}-01`;
-    document.getElementById('txDateInput').value = todayStr;
+    const dateInput = document.getElementById('txDateInput');
+    if (dateInput) {
+      dateInput.value = todayStr;
+      checkTxDateOutOfMonth(todayStr);
+    }
 
     openModal('transactionModal');
   }
 
   function openEditTransactionModal(id) {
     if (!Security.isAdmin()) {
-      openModal('adminPinModal');
+      openAdminPinModal();
       return;
     }
 
@@ -1387,7 +1722,11 @@ const RABApp = (function() {
 
     document.getElementById('txIdInput').value = tx.id;
     document.getElementById('txModalTitle').textContent = 'Edit Catatan Belanja';
-    document.getElementById('txDateInput').value = tx.date || '';
+    const dateInput = document.getElementById('txDateInput');
+    if (dateInput) {
+      dateInput.value = tx.date || '';
+      checkTxDateOutOfMonth(tx.date);
+    }
     document.getElementById('txCategoryInput').value = tx.categoryId || 'cat_sayur';
     document.getElementById('txNameInput').value = tx.itemName || '';
     document.getElementById('txQtyInput').value = tx.qty || '';
@@ -1400,7 +1739,7 @@ const RABApp = (function() {
 
   function openEditBudgetModal() {
     if (!Security.isAdmin()) {
-      openModal('adminPinModal');
+      openAdminPinModal();
       return;
     }
 
@@ -1611,8 +1950,7 @@ const RABApp = (function() {
     const adminLoginBtn = document.getElementById('adminLoginBtn');
     if (adminLoginBtn) {
       adminLoginBtn.addEventListener('click', () => {
-        document.getElementById('adminPinInput').value = '';
-        openModal('adminPinModal');
+        openAdminPinModal(false);
       });
     }
 
@@ -1639,14 +1977,44 @@ const RABApp = (function() {
 
     if (pinSubmitBtn) {
       pinSubmitBtn.addEventListener('click', async () => {
-        const pinVal = document.getElementById('adminPinInput').value;
+        const pinInput = document.getElementById('adminPinInput');
+        const alertBox = document.getElementById('adminPinAlertBox');
+        const pinVal = pinInput ? pinInput.value : '';
+
         const res = await Security.verifyAdminPIN(pinVal);
         if (res.success) {
           closeModal('adminPinModal');
           renderAll();
         } else {
-          alert(res.message || 'PIN salah! Silakan coba lagi.');
+          if (alertBox) {
+            alertBox.textContent = res.message || 'PIN salah! Silakan coba lagi.';
+            alertBox.style.display = 'block';
+            alertBox.style.color = '#ef4444';
+            alertBox.style.background = 'rgba(239, 68, 68, 0.1)';
+            alertBox.style.border = '1px solid rgba(239, 68, 68, 0.25)';
+          } else {
+            alert(res.message || 'PIN salah! Silakan coba lagi.');
+          }
+          if (pinInput) {
+            pinInput.value = '';
+            pinInput.focus();
+          }
         }
+      });
+    }
+
+    // Listener realtime peringatan tanggal belanja di luar bulan aktif
+    const txDateInput = document.getElementById('txDateInput');
+    if (txDateInput) {
+      txDateInput.addEventListener('change', (e) => checkTxDateOutOfMonth(e.target.value));
+      txDateInput.addEventListener('input', (e) => checkTxDateOutOfMonth(e.target.value));
+    }
+
+    // Listener klik badge Cloud untuk Refresh manual
+    const cloudSyncBadge = document.getElementById('cloudSyncBadge');
+    if (cloudSyncBadge) {
+      cloudSyncBadge.addEventListener('click', () => {
+        syncWithCloud(true);
       });
     }
 
@@ -1686,6 +2054,77 @@ const RABApp = (function() {
       });
     }
 
+    // 7b. Form Submit: Tambah / Edit Kategori
+    const categoryForm = document.getElementById('categoryForm');
+    if (categoryForm) {
+      categoryForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const data = {
+          id: document.getElementById('catIdInput').value,
+          name: document.getElementById('catNameInput').value,
+          icon: document.getElementById('catIconInput').value,
+          color: document.getElementById('catColorInput').value
+        };
+
+        if (saveCategory(data)) {
+          closeModal('categoryModal');
+        }
+      });
+    }
+
+    const btnOpenAddCategory = document.getElementById('btnOpenAddCategory');
+    if (btnOpenAddCategory) {
+      btnOpenAddCategory.addEventListener('click', () => openAddCategoryModal());
+    }
+
+    // Preset Emojis Picker
+    const presetEmojisWrap = document.getElementById('presetEmojisWrap');
+    if (presetEmojisWrap) {
+      presetEmojisWrap.addEventListener('click', (e) => {
+        const btn = e.target.closest('.preset-emoji-btn');
+        if (btn) {
+          const emoji = btn.getAttribute('data-emoji');
+          const iconInput = document.getElementById('catIconInput');
+          if (iconInput && emoji) {
+            iconInput.value = emoji;
+          }
+        }
+      });
+    }
+
+    // Preset Colors Picker
+    const presetColorsWrap = document.getElementById('presetColorsWrap');
+    if (presetColorsWrap) {
+      presetColorsWrap.addEventListener('click', (e) => {
+        const chip = e.target.closest('.preset-color-chip');
+        if (chip) {
+          const color = chip.getAttribute('data-color');
+          const colorInput = document.getElementById('catColorInput');
+          const textInput = document.getElementById('catColorTextInput');
+          if (colorInput && color) {
+            colorInput.value = color;
+          }
+          if (textInput && color) {
+            textInput.value = color;
+          }
+        }
+      });
+    }
+
+    // Two-way sync antara Color Picker dan Text Input
+    const catColorInput = document.getElementById('catColorInput');
+    const catColorTextInput = document.getElementById('catColorTextInput');
+    if (catColorInput && catColorTextInput) {
+      catColorInput.addEventListener('input', (e) => {
+        catColorTextInput.value = e.target.value;
+      });
+      catColorTextInput.addEventListener('input', (e) => {
+        if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+          catColorInput.value = e.target.value;
+        }
+      });
+    }
+
     // 8. Tombol Ekspor Excel
     document.querySelectorAll('.btn-export-excel').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1713,13 +2152,74 @@ const RABApp = (function() {
     });
   }
 
+  /**
+   * Fungsi Sinkronisasi Terpusat dengan Cloud Supabase
+   * Mengatasi data kosong: jika cloud kosong [], data lokal HP/Laptop langsung terupdate kosong []
+   */
+  let isSyncing = false;
+  async function syncWithCloud(isManual = false) {
+    const client = window.SupabaseClient || (typeof SupabaseClient !== 'undefined' ? SupabaseClient : null);
+    if (!client || isSyncing) return;
+
+    isSyncing = true;
+    const badge = document.getElementById('cloudSyncBadge');
+    if (badge && isManual) {
+      badge.style.opacity = '0.5';
+    }
+
+    try {
+      const isConnected = await client.testConnection();
+      if (isConnected) {
+        // 1. Ambil seluruh transaksi dari Cloud
+        const cloudTxs = await client.fetchTransactions();
+        if (Array.isArray(cloudTxs)) {
+          // KUNCI: Selalu ikuti data cloud (bahkan saat kosong [])
+          state.transactions = cloudTxs;
+        }
+
+        // 2. Ambil seluruh anggaran dari Cloud
+        const cloudBudgets = await client.fetchBudgets();
+        if (cloudBudgets && typeof cloudBudgets === 'object') {
+          state.monthlyBudgets = { ...state.monthlyBudgets, ...cloudBudgets };
+        }
+
+        // 3. Ambil daftar kategori dari Cloud
+        if (typeof client.fetchCategories === 'function') {
+          const cloudCats = await client.fetchCategories();
+          if (Array.isArray(cloudCats) && cloudCats.length > 0) {
+            state.categories = cloudCats;
+          }
+        }
+
+        saveData();
+        renderAll();
+
+        if (isManual) {
+          console.log('✅ Data berhasil disegarkan dari Supabase Cloud');
+        }
+      }
+    } catch (err) {
+      console.warn('Gagal melakukan sinkronisasi dengan Supabase Cloud:', err);
+    } finally {
+      isSyncing = false;
+      if (badge && isManual) {
+        badge.style.opacity = '1';
+      }
+    }
+  }
+
   async function init() {
     loadData();
     initTheme();
     initEventListeners();
     renderAll();
 
-    // Inisialisasi Sinkronisasi Supabase Cloud
+    // 1. Jika pengguna HP baru belum memasukkan PIN, minta input PIN terlebih dahulu
+    if (!Security.isAuthenticated()) {
+      openAdminPinModal(true);
+    }
+
+    // 2. Inisialisasi Sinkronisasi Supabase Cloud
     const client = window.SupabaseClient || (typeof SupabaseClient !== 'undefined' ? SupabaseClient : null);
     if (client) {
       client.onStatusChange((connected, msg) => {
@@ -1740,17 +2240,27 @@ const RABApp = (function() {
         }
       });
 
-      await client.testConnection();
-      const cloudTxs = await client.fetchTransactions();
-      if (cloudTxs && cloudTxs.length > 0) {
-        state.transactions = cloudTxs;
-      }
-      const cloudBudgets = await client.fetchBudgets();
-      if (cloudBudgets && Object.keys(cloudBudgets).length > 0) {
-        state.monthlyBudgets = { ...state.monthlyBudgets, ...cloudBudgets };
-      }
-      saveData();
-      renderAll();
+      // Lakukan sinkronisasi awal saat aplikasi dibuka
+      await syncWithCloud();
+
+      // Sinkronisasi otomatis saat user membuka kembali tab / layar HP (visibilitychange)
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+          syncWithCloud();
+        }
+      });
+
+      // Sinkronisasi otomatis saat window mendapatkan fokus
+      window.addEventListener('focus', () => {
+        syncWithCloud();
+      });
+
+      // Polling background setiap 15 detik agar perubahan di laptop langsung muncul di HP
+      setInterval(() => {
+        if (!document.hidden) {
+          syncWithCloud();
+        }
+      }, 15000);
     }
   }
 
@@ -1760,6 +2270,10 @@ const RABApp = (function() {
     saveTransaction,
     deleteTransaction,
     updateMonthBudget,
+    saveCategory,
+    deleteCategory,
+    openAddCategoryModal,
+    openEditCategoryModal,
     exportMonthlyToExcel
   };
 })();
